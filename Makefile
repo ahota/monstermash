@@ -1,14 +1,13 @@
 CC=gcc
-CFLAGS=-Wall
-SOURCES=monster_mash.c
-OBJECTS=$(SOURCES:.c=.o)
+CFLAGS=-Wall -c
 
-all: $(SOURCES) mmash
+all: mmash
 
-mmash: $(OBJECTS)
-    $(CC) $(OBJECTS) -o
+mmash: monster_mash.o
+	$(CC) monster_mash.o -o mmash
 
 monster_mash.o: monster_mash.c
-    $(CC) $(CFLAGS) monster_mash.c
+	$(CC) $(CFLAGS) monster_mash.c
 
-clean: rm *.o mmash
+clean: 
+	rm *.o mmash
