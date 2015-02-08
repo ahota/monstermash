@@ -37,8 +37,8 @@ void parse_input(char *input, int input_length) {
 
 void mkfs() {    
     printf("Making filesystem...");
-    disk = malloc(sizeof(disk_s*));
-    disk_create(disk);
+    disk = malloc(sizeof(char) * DISK_SIZE);
+    disk_create(disk, &inode_counter);
     commit_disk(disk);
     printf("Done\n");
 }

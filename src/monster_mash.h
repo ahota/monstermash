@@ -8,7 +8,7 @@
 #define BLOCK_SIZE 4096
 #define DISK_SIZE 104857600
 #define INODE_TABLE_SIZE 1024 //In terms of inodes
-#define INODE_SIZE 44
+#define INODE_SIZE 8
 #define FS_PATH "../fs/mmash.fs"
 
 typedef struct block {
