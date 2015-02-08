@@ -1,5 +1,9 @@
 #include "monster_mash.h"
 
+//Globals
+short inode_counter = 0; //Bad global inode counter
+disk_s *disk;
+
 int main() {
 
     printf("They did the monster mash!\n");
@@ -22,12 +26,20 @@ void parse_input(char *input, int input_length) {
     int command_length = strlen(command);
     if (strcmp(command, "mkfs") == 0) {
         mkfs();
+    } 
+    else if(strcmp(command, "exit") == 0) {
+        //Pass
     }
     else {
         printf("Invalid command: %s\n", command);
     }
 }
 
-void mkfs() {
-    printf("Making filesystem...\n");
+void mkfs() {    
+    printf("Making filesystem...");
+    disk = malloc(sizeof(disk_s*));
+    disk_create(disk);
+    commit_disk(disk);
+    printf("Done\n");
 }
+

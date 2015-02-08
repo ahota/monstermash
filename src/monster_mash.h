@@ -1,15 +1,15 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include<assert.h>
 
 #define INPUT_BUFFER_SIZE 1024
-#define NUM_BLOCK_POINTERS 10
+#define BLOCKS_PER_INODE 10
 #define BLOCK_SIZE 4096
-
-void parse_input(char *input, int input_length);
-void mkfs();
-
-short inode_counter = 0; //Bad global inode counter
+#define DISK_SIZE 104857600
+#define INODE_TABLE_SIZE 1024 //In terms of inodes
+#define INODE_SIZE 44
+#define FS_PATH "../fs/mmash.fs"
 
 typedef struct block {
     char type; //Either data or pointer to another block ('d' or 'p')
@@ -21,3 +21,14 @@ typedef struct inode {
     short id; //The inode id
     block *block_pointers; //The last pointer may be an indirect block pointer
 }inode;
+
+typedef struct disk_s {
+    inode *inode_table;
+    void *data;
+}disk_s;
+
+//Function declarations
+void parse_input(char *input, int input_length);
+void mkfs();
+
+
