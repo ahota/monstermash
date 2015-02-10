@@ -10,6 +10,7 @@
 #define INODE_TABLE_SIZE 1024 //In terms of inodes
 #define INODE_SIZE 8
 #define FS_PATH "../fs/mmash.fs"
+#define MAX_FILENAME_LENGTH 32
 
 typedef struct block {
     char type; //Either data or pointer to another block ('d' or 'p')
@@ -19,7 +20,7 @@ typedef struct block {
 typedef struct inode {
     char type; //file, directory or link
     short id; //The inode id
-    block *block_pointers; //The last pointer may be an indirect block pointer
+    int first_block_offset; //The offset for the first block of the file/directory
 }inode;
 
 typedef struct disk_s {

@@ -2,7 +2,7 @@
 
 //Globals
 short inode_counter = 0; //Bad global inode counter
-disk_s *disk;
+short current_dir = -1;
 
 int main() {
 
@@ -37,9 +37,9 @@ void parse_input(char *input, int input_length) {
 
 void mkfs() {    
     printf("Making filesystem...");
-    disk = malloc(sizeof(char) * DISK_SIZE);
-    disk_create(disk, &inode_counter);
-    commit_disk(disk);
+    short root_id = disk_create(&inode_counter);
+    current_dir = root_id;
+    chdir(current_dir);
     printf("Done\n");
 }
 
