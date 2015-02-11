@@ -2,6 +2,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<assert.h>
+#include<sys/stat.h>
 
 #define INPUT_BUFFER_SIZE 1024
 #define BLOCKS_PER_INODE 10
@@ -31,5 +32,6 @@ typedef struct disk_s {
 //Function declarations
 void parse_input(char *input, int input_length);
 void mkfs();
+void make_dir(char*);
 
 
