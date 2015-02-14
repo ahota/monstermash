@@ -33,7 +33,11 @@ void parse_input(char *input, int input_length) {
     else if(strcmp(command, "mkdir") == 0) {
         make_dir(strtok(NULL, " \n")); //Send the rest of the user input as dir name
     }
+    else if(strcmp(command, "ls") == 0) {
+        ls();
+    }
     else if(strcmp(command, "exit") == 0) {
+        //Need to delete all our crap
         //Pass
     }
     else {
@@ -44,11 +48,15 @@ void parse_input(char *input, int input_length) {
 void mkfs() {    
     mkdir("../fs", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     printf("Making filesystem...");
-    int current_dir_inode = disk_create(&inode_counter);
+    current_dir_inode = disk_create(&inode_counter);
     update_prompt(current_dir_inode, path);
     printf("Done\n");
 }
 
 void make_dir(char *name) {
     directory_create(name, &inode_counter);
+}
+
+void ls() {
+    ls_dir(current_dir_inode);
 }

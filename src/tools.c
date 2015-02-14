@@ -67,14 +67,21 @@ int block_create(char *name) {
             break;
         }
     }
+
+    //Check if offset reached the end
     if (offset == DISK_SIZE) {
         fprintf(stderr, "Disk is full!\n");
         return -1;
     }
+
     fseek(disk, offset, SEEK_SET);
     fwrite(name, sizeof(char), strlen(name) + 1, disk);//Write the name
+    //Seek forward by 32 regardless of name length
     fseek(disk, MAX_FILENAME_LENGTH, offset);
-    //fseek(disk, 4, SEEK_CUR); //Leave next_block_pointer empty
+    //Write a -1 to indicate no next block
+    int empty_offset = -1;
+    fwrite(&empty_offset, sizeof(int), 1, disk);
+
     commit_disk(disk);
     printf("%d", offset);
     return offset;
@@ -106,4 +113,18 @@ void update_prompt(int current_dir_inode, char *path) {
     commit_disk(disk);
 }
 
-
+void ls_dir(int current_dir_inode) {
+    FILE *disk = access_disk(0);
+    //Go directly to the first block pointer for the current inode
+    fseek(disk, current_dir_inode + 3, SEEK_SET);
+    int data_block_offset = -1;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    printf("%d\n", data_block_offset);
+    
+    //Go directly to the data in the block
+    fseek(disk, data_block_offset*INODE_SIZE + 36, SEEK_SET);
+    char *block_data = malloc(4060 * sizeof(char));
+    fread(block_data, sizeof(char), 4060, disk);
+    printf("block data:\n%s\n", block_data);
+    commit_disk(disk);
+}

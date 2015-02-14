@@ -7,3 +7,4 @@ int block_create(char *);
 int disk_create(short*);
 int directory_create(char*, short*);
 void update_prompt(int, char*);
+void ls_dir(int);
