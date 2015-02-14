@@ -42,13 +42,10 @@ short inode_create(char *name, char type, short *inode_counter) {
 
     //Writing inode data
     fseek(disk, offset, SEEK_SET); //Seeking to the offset that this inode is to be written
-    printf("write 1:\n");
     fwrite(&type, sizeof(char), 1, disk);
-    printf("write 2:\n");
     fwrite(inode_counter, sizeof(short), 1, disk);
-    short id = *inode_counter++;
+    short id = (*inode_counter)++;
     int block_offset = block_create(name); //Creating the new block and getting the offset
-    printf("write 3:\n");
     fwrite(&block_offset, sizeof(int), 1, disk);
     commit_disk(disk);
     return id;
@@ -83,7 +80,6 @@ int block_create(char *name) {
     fwrite(&empty_offset, sizeof(int), 1, disk);
 
     commit_disk(disk);
-    printf("%d", offset);
     return offset;
 }
 
@@ -92,12 +88,43 @@ int disk_create(short *inode_counter) {
     fseek(disk, DISK_SIZE, SEEK_SET);
     char emptiness = '0';
     fwrite(&emptiness, sizeof(char), 1, disk);
-    commit_disk(disk);   
-    return directory_create("/", inode_counter);
+    commit_disk(disk); 
+    return directory_create("/", inode_counter, NULL);
 }
 
-int directory_create(char *name, short *inode_counter) {
+void write_dir_data(char *name, int *current_dir_inode, short inode_id) {
+    FILE *disk = access_disk(0);
+    fseek(disk, *current_dir_inode + 3, SEEK_SET);
+    int block_offset = 0;
+    fread(&block_offset, sizeof(int), 1, disk);
+    fseek(disk, block_offset + 36, SEEK_SET);
+    int i;
+    for (i = 0; i < 4060; i += MAX_FILENAME_LENGTH + sizeof(int)) {
+        int temp_id = 0;
+        fseek(disk, block_offset + 36 + i, SEEK_SET);
+        fread(&temp_id, sizeof(int), 1, disk);
+        if (temp_id == 0) {
+            break;
+        }
+    }
+    if (i >= 4060) {
+        //Go to next block
+    }
+    else {
+        //Go back and write the id
+        fseek(disk, -1 * sizeof(int), SEEK_CUR);
+        fwrite(&inode_id, sizeof(int), 1, disk); //Write the new file/dir inode id
+        printf("%d\n", inode_id);
+        fwrite(name, sizeof(char), MAX_FILENAME_LENGTH, disk);
+    }
+    commit_disk(disk);
+}
+
+int directory_create(char *name, short *inode_counter, int* current_dir_inode) {
     short id = inode_create(name, 'd', inode_counter);
+    if (current_dir_inode != NULL) {
+        write_dir_data(name, current_dir_inode, id);
+    }
     return 0; // The offset for the / inode
 }
 
@@ -122,9 +149,18 @@ void ls_dir(int current_dir_inode) {
     printf("%d\n", data_block_offset);
     
     //Go directly to the data in the block
-    fseek(disk, data_block_offset*INODE_SIZE + 36, SEEK_SET);
-    char *block_data = malloc(4060 * sizeof(char));
-    fread(block_data, sizeof(char), 4060, disk);
-    printf("block data:\n%s\n", block_data);
+    fseek(disk, data_block_offset + 36, SEEK_SET);
+    int i;
+    char *name = malloc(33);
+    for (i = 0; i < 4060; i += sizeof(int) + MAX_FILENAME_LENGTH) {
+        //Go to current entry in inode table
+        fseek(disk, data_block_offset + 36 + i, SEEK_SET);
+        //Skip inode id
+        fseek(disk, sizeof(int), SEEK_CUR);
+        fread(name, sizeof(char), MAX_FILENAME_LENGTH, disk);
+        if(strlen(name) != 0)
+            printf("%s/\t", name);
+    }
+    printf("\n");
     commit_disk(disk);
 }

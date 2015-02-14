@@ -54,7 +54,7 @@ void mkfs() {
 }
 
 void make_dir(char *name) {
-    directory_create(name, &inode_counter);
+    directory_create(name, &inode_counter, &current_dir_inode);
 }
 
 void ls() {
