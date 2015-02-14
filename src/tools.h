@@ -9,3 +9,4 @@ int directory_create(char*, short*, int*);
 void write_dir_data(char *name, int *current_dir_inode, short);
 void update_prompt(int, char*);
 void ls_dir(int);
+int ch_dir(char*, int*);

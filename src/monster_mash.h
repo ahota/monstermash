@@ -34,4 +34,5 @@ void parse_input(char *input, int input_length);
 void mkfs();
 void make_dir(char*);
 void ls();
+void cd(char*);
 

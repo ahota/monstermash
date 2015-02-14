@@ -115,7 +115,7 @@ void write_dir_data(char *name, int *current_dir_inode, short inode_id) {
         fseek(disk, -1 * sizeof(int), SEEK_CUR);
         fwrite(&inode_id, sizeof(int), 1, disk); //Write the new file/dir inode id
         printf("%d\n", inode_id);
-        fwrite(name, sizeof(char), MAX_FILENAME_LENGTH, disk);
+        fwrite(name, sizeof(char), strlen(name), disk);
     }
     commit_disk(disk);
 }
@@ -164,3 +164,40 @@ void ls_dir(int current_dir_inode) {
     printf("\n");
     commit_disk(disk);
 }
+
+int ch_dir(char *name, int *current_dir_inode) {
+    FILE *disk = access_disk(0);
+    fseek(disk, *current_dir_inode + 3, SEEK_SET);
+    int data_block_offset = -1;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    fseek(disk, data_block_offset + 36, SEEK_SET);
+    int i;
+    char *check_name = malloc(32);
+    int inode_id = 0;
+    for (i = 0; i < 4060; i += sizeof(int) + MAX_FILENAME_LENGTH) {
+        fseek(disk, data_block_offset + 36 + i, SEEK_SET);
+        fread(&inode_id, sizeof(int), 1, disk);
+        printf("%d\n", inode_id);
+        //fseek(disk, sizeof(short), SEEK_CUR);
+        fread(check_name, sizeof(char), MAX_FILENAME_LENGTH, disk);
+        if (strcmp(name, check_name) == 0) {
+            break;
+        }
+    }
+    if (i >= 4060) {
+        fprintf(stderr, "Directory does not exist\n");
+        return *current_dir_inode;
+    }
+    for (i = 0; i < INODE_TABLE_SIZE; i += INODE_SIZE) {
+        short check_inode_id;
+        fseek(disk, i + 1, SEEK_SET);
+        fread(&check_inode_id, sizeof(short), 1, disk);
+        if (check_inode_id == inode_id) {
+            commit_disk(disk);
+            return i;
+        }
+    }
+    fprintf(stderr, "Couldn't find inode %d\n", inode_id);
+    return *current_dir_inode;
+}
+

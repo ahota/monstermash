@@ -36,6 +36,9 @@ void parse_input(char *input, int input_length) {
     else if(strcmp(command, "ls") == 0) {
         ls();
     }
+    else if(strcmp(command, "cd") == 0) {
+        cd(strtok(NULL, " \n"));
+    }
     else if(strcmp(command, "exit") == 0) {
         //Need to delete all our crap
         //Pass
@@ -59,4 +62,9 @@ void make_dir(char *name) {
 
 void ls() {
     ls_dir(current_dir_inode);
+}
+
+void cd(char *name) {
+    current_dir_inode = ch_dir(name, &current_dir_inode);
+    update_prompt(current_dir_inode, path);
 }
