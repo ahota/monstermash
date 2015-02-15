@@ -1,5 +1,10 @@
 #include "tools.h"
 
+//Main processing functions for user commands
+
+
+//Open the disk file for reading
+//Make sure to commit_disk() when done
 FILE *access_disk(int first_access) {
     char *access = first_access ? "w+" : "r+"; 
     FILE *disk = fopen(FS_PATH, access);
@@ -13,6 +18,7 @@ FILE *access_disk(int first_access) {
     }
 }
 
+//Close the given disk file
 int commit_disk(FILE *disk) {
     int ret = fclose(disk); 
     disk = 0;
@@ -22,10 +28,11 @@ int commit_disk(FILE *disk) {
     return ret;
 }
 
+//Create a new inode and return its ID
 short inode_create(char *name, char type, short *inode_counter) {
     FILE *disk = access_disk(0);
 
-    // Determine a free offset
+    //Find the first free space for this inode
     int offset;
     for (offset = 0; offset < INODE_TABLE_SIZE; offset += INODE_SIZE) {
         fseek(disk, offset, SEEK_SET);
@@ -41,16 +48,23 @@ short inode_create(char *name, char type, short *inode_counter) {
     }
 
     //Writing inode data
-    fseek(disk, offset, SEEK_SET); //Seeking to the offset that this inode is to be written
+    //Seeking to the offset that this inode is to be written
+    fseek(disk, offset, SEEK_SET);
     fwrite(&type, sizeof(char), 1, disk);
+    //Write the current value in inode_counter
     fwrite(inode_counter, sizeof(short), 1, disk);
+    //Save the current inode_counter and then increment it
     short id = (*inode_counter)++;
-    int block_offset = block_create(name); //Creating the new block and getting the offset
+
+    //Create a new data block for this inode to point to
+    int block_offset = block_create(name);
+    //Save the offset of the created block
     fwrite(&block_offset, sizeof(int), 1, disk);
     commit_disk(disk);
     return id;
 }
 
+//Create a new data block and return its offset
 int block_create(char *name) {
     FILE *disk = access_disk(0);
 
@@ -64,7 +78,6 @@ int block_create(char *name) {
             break;
         }
     }
-
     //Check if offset reached the end
     if (offset == DISK_SIZE) {
         fprintf(stderr, "Disk is full!\n");
@@ -72,7 +85,8 @@ int block_create(char *name) {
     }
 
     fseek(disk, offset, SEEK_SET);
-    fwrite(name, sizeof(char), strlen(name) + 1, disk);//Write the name
+    //Write the name
+    fwrite(name, sizeof(char), strlen(name) + 1, disk);
     //Seek forward by 32 regardless of name length
     fseek(disk, MAX_FILENAME_LENGTH, offset);
     //Write a -1 to indicate no next block
@@ -83,21 +97,29 @@ int block_create(char *name) {
     return offset;
 }
 
+//That new disk smell
 int disk_create(short *inode_counter) {
     FILE *disk = access_disk(1);
+    //Seek to the end and write a single byte to force the file to be 100 MB
     fseek(disk, DISK_SIZE, SEEK_SET);
     char emptiness = '0';
     fwrite(&emptiness, sizeof(char), 1, disk);
-    commit_disk(disk); 
+    commit_disk(disk);
+
+    //Create the root directory
     return directory_create("/", inode_counter, NULL);
 }
 
+
+//Write directory contents to a directory's data block
 void write_dir_data(char *name, int *current_dir_inode, short inode_id) {
     FILE *disk = access_disk(0);
+    //Seek to the block_offset
     fseek(disk, *current_dir_inode + 3, SEEK_SET);
     int block_offset = 0;
     fread(&block_offset, sizeof(int), 1, disk);
     fseek(disk, block_offset + 36, SEEK_SET);
+
     int i;
     for (i = 0; i < 4060; i += MAX_FILENAME_LENGTH + sizeof(int)) {
         int temp_id = 0;
@@ -113,33 +135,42 @@ void write_dir_data(char *name, int *current_dir_inode, short inode_id) {
     else {
         //Go back and write the id
         fseek(disk, -1 * sizeof(int), SEEK_CUR);
-        fwrite(&inode_id, sizeof(int), 1, disk); //Write the new file/dir inode id
+        //Write the new file/dir inode id
+        fwrite(&inode_id, sizeof(int), 1, disk);
         printf("%d\n", inode_id);
         fwrite(name, sizeof(char), strlen(name), disk);
     }
     commit_disk(disk);
 }
 
+//New directory
 int directory_create(char *name, short *inode_counter, int* current_dir_inode) {
     short id = inode_create(name, 'd', inode_counter);
+    //Check if we're writing the root directory
+    //Root doesn't need data in it yet
     if (current_dir_inode != NULL) {
         write_dir_data(name, current_dir_inode, id);
     }
+
+    //wtf
     return 0; // The offset for the / inode
 }
 
+//Update the shell prompt to reflect the user's current location
 void update_prompt(int current_dir_inode, char *path) {
     FILE *disk = access_disk(0);
     fseek(disk, current_dir_inode + sizeof(char) + sizeof(short), SEEK_SET);
     int dir_offset = 0;
     fread(&dir_offset, sizeof(int), 1, disk);
     fseek(disk, dir_offset, SEEK_SET);
+
     char *dir_name = malloc(MAX_FILENAME_LENGTH);
     fread(dir_name, sizeof(char), MAX_FILENAME_LENGTH, disk);
     strcpy(path, dir_name);
     commit_disk(disk);
 }
 
+//Iterate through the current directory's data table and list valid files/dirs
 void ls_dir(int current_dir_inode) {
     FILE *disk = access_disk(0);
     //Go directly to the first block pointer for the current inode
@@ -165,15 +196,18 @@ void ls_dir(int current_dir_inode) {
     commit_disk(disk);
 }
 
+//Go to a directory
 int ch_dir(char *name, int *current_dir_inode) {
     FILE *disk = access_disk(0);
     fseek(disk, *current_dir_inode + 3, SEEK_SET);
     int data_block_offset = -1;
     fread(&data_block_offset, sizeof(int), 1, disk);
     fseek(disk, data_block_offset + 36, SEEK_SET);
+
     int i;
     char *check_name = malloc(32);
     int inode_id = 0;
+    //Find the directory/file in the current directory's inode table
     for (i = 0; i < 4060; i += sizeof(int) + MAX_FILENAME_LENGTH) {
         fseek(disk, data_block_offset + 36 + i, SEEK_SET);
         fread(&inode_id, sizeof(int), 1, disk);
@@ -186,8 +220,11 @@ int ch_dir(char *name, int *current_dir_inode) {
     }
     if (i >= 4060) {
         fprintf(stderr, "Directory does not exist\n");
+        //destroy_file_system();
         return *current_dir_inode;
     }
+    
+    //Go to the inode and set the current inode pointer to its offset
     for (i = 0; i < INODE_TABLE_SIZE; i += INODE_SIZE) {
         short check_inode_id;
         fseek(disk, i + 1, SEEK_SET);
@@ -197,6 +234,7 @@ int ch_dir(char *name, int *current_dir_inode) {
             return i;
         }
     }
+    //Weird error that hopefully never happens
     fprintf(stderr, "Couldn't find inode %d\n", inode_id);
     return *current_dir_inode;
 }

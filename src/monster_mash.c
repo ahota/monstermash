@@ -31,7 +31,8 @@ void parse_input(char *input, int input_length) {
         mkfs();
     }
     else if(strcmp(command, "mkdir") == 0) {
-        make_dir(strtok(NULL, " \n")); //Send the rest of the user input as dir name
+        //Send the next token of user input as an argument
+        make_dir(strtok(NULL, " \n"));
     }
     else if(strcmp(command, "ls") == 0) {
         ls();
