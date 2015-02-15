@@ -13,21 +13,13 @@
 #define FS_PATH "../fs/mmash.fs"
 #define MAX_FILENAME_LENGTH 32
 
-typedef struct block {
-    char type; //Either data or pointer to another block ('d' or 'p')
-    void *data; //Array of pointers to either data or other blocks
-}block;
-
-typedef struct inode {
-    char type; //file, directory or link
-    short id; //The inode id
-    int first_block_offset; //The offset for the first block of the file/directory
-}inode;
-
-typedef struct disk_s {
-    inode *inode_table;
-    void *data;
-}disk_s;
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
 
 //Function declarations
 void parse_input(char *input, int input_length);
@@ -35,4 +27,4 @@ void mkfs();
 void make_dir(char*);
 void ls();
 void cd(char*);
-
+void rmdir(char*);

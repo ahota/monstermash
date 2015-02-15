@@ -3,7 +3,7 @@
 //Globals
 short inode_counter = 0; //Bad global inode counter
 int current_dir_inode = 0; //Offset of the current directory's inode
-char *prompt = "monster@butt:";
+char *prompt = "monster@test:";
 char *path;
 
 int main() {
@@ -12,7 +12,7 @@ int main() {
     char *user_input = malloc(INPUT_BUFFER_SIZE);
     path = malloc(MAX_FILENAME_LENGTH);
     while(1) {
-        printf("%s%s$ ", prompt, path);
+        printf("%s%s $ ", prompt, path);
         fflush(NULL);
         fgets(user_input, INPUT_BUFFER_SIZE, stdin);
         int input_length = strlen(user_input);
@@ -39,6 +39,9 @@ void parse_input(char *input, int input_length) {
     }
     else if(strcmp(command, "cd") == 0) {
         cd(strtok(NULL, " \n"));
+    }
+    else if(strcmp(command, "rmdir") == 0) {
+        rmdir(strtok(NULL, " \n"));
     }
     else if(strcmp(command, "exit") == 0) {
         //Need to delete all our crap
@@ -68,4 +71,8 @@ void ls() {
 void cd(char *name) {
     current_dir_inode = ch_dir(name, &current_dir_inode);
     update_prompt(current_dir_inode, path);
+}
+
+void rmdir(char *name) {
+    directory_remove(name, &current_dir_inode);
 }

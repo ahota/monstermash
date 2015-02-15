@@ -125,7 +125,9 @@ void write_dir_data(char *name, int *current_dir_inode, short inode_id) {
         int temp_id = 0;
         fseek(disk, block_offset + 36 + i, SEEK_SET);
         fread(&temp_id, sizeof(int), 1, disk);
-        if (temp_id == 0) {
+        char temp_name;
+        fread(&temp_name, sizeof(char), 1, disk);
+        if (temp_id == 0 && temp_name != '.') {
             break;
         }
     }
@@ -134,7 +136,7 @@ void write_dir_data(char *name, int *current_dir_inode, short inode_id) {
     }
     else {
         //Go back and write the id
-        fseek(disk, -1 * sizeof(int), SEEK_CUR);
+        fseek(disk, -1 * (sizeof(int) + 1), SEEK_CUR);
         //Write the new file/dir inode id
         fwrite(&inode_id, sizeof(int), 1, disk);
         printf("%d\n", inode_id);
@@ -146,9 +148,16 @@ void write_dir_data(char *name, int *current_dir_inode, short inode_id) {
 //New directory
 int directory_create(char *name, short *inode_counter, int* current_dir_inode) {
     short id = inode_create(name, 'd', inode_counter);
+    //Write dot
+    int inode_offset = find_inode_offset(id);
+    write_dir_data(".", &inode_offset, id);
     //Check if we're writing the root directory
     //Root doesn't need data in it yet
     if (current_dir_inode != NULL) {
+        //Write dot dot
+        short parent_inode_id = find_inode_id(*current_dir_inode);
+        write_dir_data("..", &inode_offset, parent_inode_id);
+        //Write new directory to parent
         write_dir_data(name, current_dir_inode, id);
     }
 
@@ -190,7 +199,7 @@ void ls_dir(int current_dir_inode) {
         fseek(disk, sizeof(int), SEEK_CUR);
         fread(name, sizeof(char), MAX_FILENAME_LENGTH, disk);
         if(strlen(name) != 0)
-            printf("%s/\t", name);
+            printf(ANSI_COLOR_GREEN "%s/\t" ANSI_COLOR_RESET, name);
     }
     printf("\n");
     commit_disk(disk);
@@ -223,7 +232,18 @@ int ch_dir(char *name, int *current_dir_inode) {
         //destroy_file_system();
         return *current_dir_inode;
     }
-    
+    int inode_offset = find_inode_offset(inode_id);
+    if (inode_offset == -1) {
+        return *current_dir_inode;
+    }
+    else {
+        return inode_offset;
+    }
+}
+
+int find_inode_offset(short inode_id) {
+    FILE *disk = access_disk(0);
+    int i;
     //Go to the inode and set the current inode pointer to its offset
     for (i = 0; i < INODE_TABLE_SIZE; i += INODE_SIZE) {
         short check_inode_id;
@@ -236,6 +256,82 @@ int ch_dir(char *name, int *current_dir_inode) {
     }
     //Weird error that hopefully never happens
     fprintf(stderr, "Couldn't find inode %d\n", inode_id);
-    return *current_dir_inode;
+    commit_disk(disk);
+    return -1;
 }
 
+short find_inode_id(int inode_offset) {
+    FILE *disk = access_disk(0);
+    fseek(disk, inode_offset + 1, SEEK_SET); //+1 for skipping inode type
+    short inode_id = 0;
+    fread(&inode_id, sizeof(short), 1, disk);
+    commit_disk(disk);
+    return inode_id;
+}
+
+void wipe(FILE* disk, int offset, int n_bytes) {
+    fseek(disk, offset, SEEK_SET);
+    char *emptiness = malloc(n_bytes);
+    int i;
+    for (i = 0; i < n_bytes; i++) {
+        emptiness[i] = 0;
+    }
+    fwrite(emptiness, sizeof(char), n_bytes, disk);
+}
+
+int directory_remove(char *name, int *current_dir_inode) {
+    FILE *disk = access_disk(0);
+    fseek(disk, *current_dir_inode + 3, SEEK_SET);
+    int data_block_offset = -1;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+
+    int i; //Offset
+    char *check_name = malloc(32);
+    int inode_id = 0;
+    int rmdir_offset = 0;
+    //Find the directory/file in the current directory's inode table
+    for (i = 0; i < 4060; i += sizeof(int) + MAX_FILENAME_LENGTH) {
+        fseek(disk, data_block_offset + 36 + i, SEEK_SET);
+        fread(&inode_id, sizeof(int), 1, disk);
+        printf("%d\n", inode_id);
+        fread(check_name, sizeof(char), MAX_FILENAME_LENGTH, disk);
+        if (strcmp(name, check_name) == 0) {
+            rmdir_offset = data_block_offset + i + 36;
+            break;
+        }
+    }
+    if (i >= 4060) {
+        fprintf(stderr, "Directory does not exist\n");
+        //destroy_file_system();
+        return -1;
+    }
+    //Go to the directory and check to see if it's empty
+    int inode_offset = find_inode_offset(inode_id);
+    fseek(disk, inode_offset + 3, SEEK_SET);
+    
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    fseek(disk, data_block_offset + 36, SEEK_SET);
+    int n_files = 0;
+    for (i = 0; i < 4060; i += MAX_FILENAME_LENGTH + sizeof(int)) {
+        fseek(disk, data_block_offset + MAX_FILENAME_LENGTH + sizeof(int) + i, SEEK_SET);
+        int temp_id = 0;
+        char *temp_name = malloc(MAX_FILENAME_LENGTH);
+        fread(&temp_id, sizeof(int), 1, disk);
+        fread(temp_name, sizeof(char), MAX_FILENAME_LENGTH, disk);
+        if (temp_id != 0 && strcmp(temp_name, ".") != 0 && strcmp(temp_name, "..") != 0) {
+            n_files++;
+        }
+    }
+    if (n_files > 0) {
+        fprintf(stderr, "Cannot delete non-empty directory\n");
+        commit_disk(disk);
+        return -1;
+    }
+    wipe(disk, data_block_offset, BLOCK_SIZE); //Wiping data block
+    wipe(disk, inode_offset, INODE_SIZE); //Wiping inode
+
+    //Remove it from the parent
+    wipe(disk, rmdir_offset, MAX_FILENAME_LENGTH + sizeof(int));
+    commit_disk(disk);
+    return 0;
+}
