@@ -1,6 +1,19 @@
 #include "monster_mash.h"
 
-inode *inode_create(char type);
-block *block_create(char type);
-void disk_create(disk_s*);
-void commit_disk(disk_s*);
+FILE *access_disk(int);
+int commit_disk(FILE*);
+short inode_create(char*, char type,short*);
+int block_create(char *);
+int disk_create(short*);
+int directory_create(char*, short*, int*);
+void write_dir_data(char *name, int *current_dir_inode, short);
+void update_prompt(int, char*);
+void ls_dir(int);
+int ch_dir(char*, int*);
+int find_inode_offset(short);
+short find_inode_id(int);
+int directory_remove(char*, int*);
+int file_exists(char*, int*);
+int file_create(char*, short*, int*);
+void write_data(int, int, char*);
+void read_data(int, int, int);

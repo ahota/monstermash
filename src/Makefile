@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-c
+CFLAGS=-c -g
 SOURCES=monster_mash.c tools.c
 OBJECTS=$(SOURCES:.c=.o)
 
