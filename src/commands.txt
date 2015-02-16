@@ -1,0 +1,4 @@
+mkfs
+mkdir test
+ls
+exit

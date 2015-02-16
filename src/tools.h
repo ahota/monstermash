@@ -13,3 +13,7 @@ int ch_dir(char*, int*);
 int find_inode_offset(short);
 short find_inode_id(int);
 int directory_remove(char*, int*);
+int file_exists(char*, int*);
+int file_create(char*, short*, int*);
+void write_data(int, int, char*);
+void read_data(int, int, int);

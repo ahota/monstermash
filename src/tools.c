@@ -186,7 +186,6 @@ void ls_dir(int current_dir_inode) {
     fseek(disk, current_dir_inode + 3, SEEK_SET);
     int data_block_offset = -1;
     fread(&data_block_offset, sizeof(int), 1, disk);
-    printf("%d\n", data_block_offset);
     
     //Go directly to the data in the block
     fseek(disk, data_block_offset + 36, SEEK_SET);
@@ -195,11 +194,28 @@ void ls_dir(int current_dir_inode) {
     for (i = 0; i < 4060; i += sizeof(int) + MAX_FILENAME_LENGTH) {
         //Go to current entry in inode table
         fseek(disk, data_block_offset + 36 + i, SEEK_SET);
-        //Skip inode id
-        fseek(disk, sizeof(int), SEEK_CUR);
+        
+        int temp_inode_id = 0;
+        fread(&temp_inode_id, sizeof(int), 1, disk);
         fread(name, sizeof(char), MAX_FILENAME_LENGTH, disk);
-        if(strlen(name) != 0)
-            printf(ANSI_COLOR_GREEN "%s/\t" ANSI_COLOR_RESET, name);
+        if(strlen(name) != 0) {
+            //Get the type of this element from its inode
+            fseek(disk, find_inode_offset(temp_inode_id), SEEK_SET);
+            char type = 0;
+            fread(&type, sizeof(char), 1, disk);
+            if (type == 'd') {
+                printf(BOLDBLUE "%s\t" RESET, name);
+            }
+            else if (type == 'f') {
+                printf(RESET "%s\t" RESET, name);
+            }
+            else if (type == 'l'){
+                printf(CYAN "%s\t" RESET, name); 
+            }
+            else {
+                fprintf(stderr, "Unknown element type %c\n", type);
+            }
+        }
     }
     printf("\n");
     commit_disk(disk);
@@ -335,3 +351,63 @@ int directory_remove(char *name, int *current_dir_inode) {
     commit_disk(disk);
     return 0;
 }
+
+int file_exists(char *name, int *current_dir_inode) {
+    FILE *disk = access_disk(0);
+    fseek(disk, (*current_dir_inode) + 3, SEEK_SET);
+    int data_block_offset = 0;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    int i;
+    for (i = 0; i < 4060; i += MAX_FILENAME_LENGTH + sizeof(int)) {
+        fseek(disk, data_block_offset + i + MAX_FILENAME_LENGTH + sizeof(int), SEEK_SET);
+        int inode_id = 0;
+        char *temp_name = malloc(MAX_FILENAME_LENGTH);
+        fread(&inode_id, sizeof(int), 1, disk);
+        fread(temp_name, sizeof(char), MAX_FILENAME_LENGTH, disk);
+        if (strcmp(name, temp_name) == 0) {
+            commit_disk(disk);
+            return inode_id;
+        }
+    }
+    commit_disk(disk);
+    return -1;
+}
+
+int file_create(char *name, short *inode_counter, int *current_dir_inode) {
+    short inode_id = inode_create(name, 'f', inode_counter);
+    write_dir_data(name, current_dir_inode, inode_id);
+    return inode_id;
+}
+
+void write_data(int fd, int file_offset, char *text) {
+    FILE *disk = access_disk(0);
+    int inode_offset = find_inode_offset(fd);
+    fseek(disk, inode_offset + 3, SEEK_SET);
+    int data_block_offset = 0;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    fseek(disk, data_block_offset + MAX_FILENAME_LENGTH + sizeof(int) + file_offset, SEEK_SET);
+    int i;
+    int len = strlen(text);
+    fwrite(text, sizeof(char), len, disk);
+    commit_disk(disk);
+}
+
+void read_data(int fd, int file_offset, int size) {
+    FILE *disk = access_disk(0);
+    int inode_offset = find_inode_offset(fd);
+    fseek(disk, inode_offset + 3, SEEK_SET);
+    int data_block_offset = 0;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    fseek(disk, data_block_offset + MAX_FILENAME_LENGTH + sizeof(int) + file_offset, SEEK_SET);
+    int i;
+    char *text = malloc(size + 1);
+    fread(text, sizeof(char), size, disk);
+    text[size] = '\0';
+    printf("%s\n", text);
+    commit_disk(disk);   
+}
+
+
+
+
+
