@@ -379,6 +379,16 @@ int file_create(char *name, short *inode_counter, int *current_dir_inode) {
     return inode_id;
 }
 
+void link_create(char *name, char *src, short *inode_counter, int *current_dir_inode) {
+    short inode_id = inode_create(name, 'l', inode_counter);
+    write_dir_data(name, current_dir_inode, inode_id);
+    //Search current dir and find the inode id for src
+    int src_inode_id = file_exists(src, current_dir_inode);
+    char text[32];
+    snprintf(text, 32, "%d", src_inode_id);
+    write_data(inode_id, 0, text);
+}
+
 void write_data(int fd, int file_offset, char *text) {
     FILE *disk = access_disk(0);
     int inode_offset = find_inode_offset(fd);
@@ -406,6 +416,7 @@ void read_data(int fd, int file_offset, int size) {
     printf("%s\n", text);
     commit_disk(disk);   
 }
+
 
 
 

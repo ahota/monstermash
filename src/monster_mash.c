@@ -87,6 +87,9 @@ void parse_input(char *input, int input_length) {
     else if(strcmp(command, "read") == 0) {
         read(atoi(strtok(NULL, " \n")), atoi(strtok(NULL, " \n")));
     }
+    else if(strcmp(command, "link") == 0) {
+        link(strtok(NULL, " \n"), strtok(NULL, " \n"));
+    }
     else if(strcmp(command, "exit") == 0) {
         printf("Bye!\n");
         exit(0);
@@ -247,4 +250,11 @@ void read(int size, int fd) {
         fprintf(stderr, BOLDRED "Invalid file descriptor\n" RESET);
         return;
     }   
+}
+
+void link(char *dest, char *src) {
+    //Check to see if file dest already exists 
+    //Check to see if src exists
+    //Create new link
+    link_create(dest, src, &inode_counter, &current_dir_inode);
 }

@@ -44,3 +44,4 @@ void close(char *name);
 void write(char*, int);
 void seek(int, int);
 void read(int, int);
+void link(char*, char*);
