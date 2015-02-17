@@ -18,3 +18,5 @@ int file_create(char*, short*, int*);
 void write_data(int, int, char*);
 void read_data(int, int, int);
 void link_create(char*, char*, short*, int*);
+char *get_parent_path(char *);
+char *get_filename(char *);

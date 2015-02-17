@@ -20,8 +20,9 @@ int main() {
 
     // For persistency
     FILE *disk = fopen(FS_PATH, "r");
+    char root[2] = ".";
     if (disk != NULL) {
-        cd(".");
+        cd(root);
         int i;
         for (i = 0; i < INODE_TABLE_SIZE; i += INODE_SIZE) {
             fseek(disk, i + 1, SEEK_SET);
@@ -257,4 +258,8 @@ void link(char *dest, char *src) {
     //Check to see if src exists
     //Create new link
     link_create(dest, src, &inode_counter, &current_dir_inode);
+}
+
+void unlink() {
+    return;
 }

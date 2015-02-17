@@ -13,6 +13,8 @@
 #define FS_PATH "../fs/mmash.fs"
 #define MAX_FILENAME_LENGTH 32
 #define MAX_OPEN_FILES 1024
+#define METADATA_SIZE (MAX_FILENAME_LENGTH + 4 + 2)
+#define DIR_TABLE_ENTRY_SIZE (MAX_FILENAME_LENGTH + 4)
 #define END -1
 
 #define RED     "\x1b[31m"
@@ -45,3 +47,4 @@ void write(char*, int);
 void seek(int, int);
 void read(int, int);
 void link(char*, char*);
+void unlink();
