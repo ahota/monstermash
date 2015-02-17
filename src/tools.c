@@ -228,38 +228,6 @@ int ch_dir(char *name, int *current_dir_inode) {
         return temp_dir_inode;
     }
     return *current_dir_inode;
-
-    FILE *disk = access_disk(0);
-    fseek(disk, *current_dir_inode + 3, SEEK_SET);
-    int data_block_offset = -1;
-    fread(&data_block_offset, sizeof(int), 1, disk);
-
-    int i;
-    char *check_name = malloc(32);
-    int inode_id = 0;
-    //Find the directory/file in the current directory's inode table
-    for (i = 0; i < 4058; i += DIR_TABLE_ENTRY_SIZE) {
-        fseek(disk, data_block_offset + METADATA_SIZE + i, SEEK_SET);
-        fread(&inode_id, sizeof(int), 1, disk);
-        printf("%d\n", inode_id);
-        //fseek(disk, sizeof(short), SEEK_CUR);
-        fread(check_name, sizeof(char), MAX_FILENAME_LENGTH, disk);
-        if (strcmp(name, check_name) == 0) {
-            break;
-        }
-    }
-    if (i >= 4058) {
-        fprintf(stderr, "Directory does not exist\n");
-        //destroy_file_system();
-        return *current_dir_inode;
-    }
-    int inode_offset = find_inode_offset(inode_id);
-    if (inode_offset == -1) {
-        return *current_dir_inode;
-    }
-    else {
-        return inode_offset;
-    }
 }
 
 int find_inode_offset(short inode_id) {
@@ -383,27 +351,46 @@ int file_create(char *name, short *inode_counter, int *current_dir_inode) {
     return inode_id;
 }
 
+//Create a link `name` pointing to target `src`
 void link_create(char *name, char *src, short *inode_counter, int *current_dir_inode) {
+    //If the user enters paths, find the target, the link's directory, and the link's name
     int src_inode_offset = expand_path(src, current_dir_inode);
     char *link_parent = get_parent_path(name);
-    printf("link parent = %s\n", link_parent);
     char *link_name = get_filename(name);
-    printf("link name = %s\n", link_name);
 
-    printf("%s\n", link_parent);
+    //The inode the link will be under
     int link_parent_inode_offset = expand_path(link_parent, current_dir_inode);
 
+    //The link's inode
     short inode_id = inode_create(link_name, 'l', inode_counter);
+    //Add the link to its parent's inode table
     write_dir_data(link_name, &link_parent_inode_offset, inode_id);
     //Search current dir and find the inode id for src
-    int src_inode_id = find_inode_id(src_inode_offset);//file_exists(src, current_dir_inode);
-    char text[32];
-    snprintf(text, 32, "%d", src_inode_id);
-    write_data(inode_id, 0, text);
+    int src_inode_id = find_inode_id(src_inode_offset);
+
+    char src_inode_text[33];
+    sprintf(src_inode_text, "%d", src_inode_id);
+    write_data(inode_id, 0, src_inode_text);
+    increment_link(src_inode_offset);
 
     if(strcmp(link_parent, ".") != 0) {
         free(link_parent);
     }
+}
+
+void increment_link(int target_inode_offset) {
+    FILE *disk = access_disk(0);
+    int data_block_offset = -1;
+    fseek(disk, target_inode_offset + 3 , SEEK_SET);
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    fseek(disk, data_block_offset + METADATA_SIZE - sizeof(short), SEEK_SET);
+    short count = -1;
+    fread(&count, sizeof(short), 1, disk);
+    printf("%d -> ", count++);
+    printf("%d\n", count);
+    fseek(disk, -1 * sizeof(short), SEEK_CUR);
+    fwrite(&count, sizeof(short), 1, disk);
+    commit_disk(disk);
 }
 
 void write_data(int fd, int file_offset, char *text) {

@@ -20,3 +20,4 @@ void read_data(int, int, int);
 void link_create(char*, char*, short*, int*);
 char *get_parent_path(char *);
 char *get_filename(char *);
+void increment_link(int);
