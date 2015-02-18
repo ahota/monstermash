@@ -187,7 +187,7 @@ void open(char *file_flag) {
     printf("file_flag: %s\n", file_flag);
 
     char *name, *flag;
-    smart_split(file_flag, name, flag);
+    smart_split(file_flag, &name, &flag);
     printf("open()\n");
     printf("name       = %s\n", name);
     printf("flag       = %s\n", flag);

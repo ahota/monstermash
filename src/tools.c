@@ -5,7 +5,7 @@
 //Split the given arguments into arg1 and arg2
 //Either or both argument can have quotations
 //If an argument does not have quotations, it is space-delimiter tokenized
-void smart_split(char *args, char *arg1, char *arg2) {
+void smart_split(char *args, char **arg1, char **arg2) {
     //Trim whitespace from arguments
     int start, end;
     trim_whitespace(args, &start, &end);
@@ -25,16 +25,16 @@ void smart_split(char *args, char *arg1, char *arg2) {
                 break;
         //Don't incremenet arg1_end so we don't include the quotation mark
         //arg1_end++;
-        arg1 = malloc(arg1_end - start + 1);
-        strncpy(arg1, args + start, arg1_end - start);
-        arg1[arg1_end - start] = '\0';
+        *arg1 = malloc(arg1_end - start + 1);
+        strncpy(*arg1, args + start, arg1_end - start);
+        *arg1[arg1_end - start] = '\0';
     }
     else {
-        arg1 = strtok(args, " \n");
-        if(arg1 == NULL) {
+        *arg1 = strtok(args, " \n");
+        if(*arg1 == NULL) {
             return;
         }
-        arg1_end = strlen(arg1) + start;
+        arg1_end = strlen(*arg1) + start;
         //Note that arg1 may be incorrect
         //If the user has a filename or path with spaces
         //and didn't put quotations around it, they'll get
@@ -51,16 +51,16 @@ void smart_split(char *args, char *arg1, char *arg2) {
         for(; end > arg2_start; end--)
             if(args[end] == '"')
                 break;
-        arg2 = malloc(end - arg2_start + 1);
-        strncpy(arg2, args + arg2_start, end - arg2_start);
-        arg2[end - arg2_start] = '\0';
+        *arg2 = malloc(end - arg2_start + 1);
+        strncpy(*arg2, args + arg2_start, end - arg2_start);
+        *arg2[end - arg2_start] = '\0';
     }
     else {
         if(arg1_q)
-            arg2 = strtok(args + arg2_start, " \n");
+            *arg2 = strtok(args + arg2_start, " \n");
         else
-            arg2 = strtok(NULL, " \n");
-        if(arg2 == NULL) {
+            *arg2 = strtok(NULL, " \n");
+        if(*arg2 == NULL) {
             return;
         }
     }
@@ -68,8 +68,8 @@ void smart_split(char *args, char *arg1, char *arg2) {
     printf("arg1_end   = %d\n", arg1_end);
     printf("arg2_start = %d\n", arg2_start);
     printf("end        = %d\n", end);
-    printf("arg1       = %s\n", arg1);
-    printf("arg2       = %s\n", arg2);
+    printf("arg1       = %s\n", *arg1);
+    printf("arg2       = %s\n", *arg2);
 }
 
 void trim_whitespace(char *name, int *start, int *end) {

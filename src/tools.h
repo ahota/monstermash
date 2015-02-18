@@ -25,4 +25,4 @@ int decrement_link(int);
 void link_remove(char *name, short *inode_counter, int *current_dir_inode); 
 void remove_file_from_dir(FILE *disk, int parent_offset, int inode_id);
 void trim_whitespace(char *name, int *start, int *end);
-void smart_split(char *args, char *arg1, char *arg2);
+void smart_split(char *args, char **arg1, char **arg2);
