@@ -41,7 +41,7 @@ void make_dir(char*);
 void ls();
 void cd(char*);
 void rmdir(char*);
-void open(char*, char*);
+void open(char*);
 void close(char *name);
 void write(char*, int);
 void seek(int, int);

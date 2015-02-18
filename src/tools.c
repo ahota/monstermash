@@ -2,6 +2,87 @@
 
 //Main processing functions for user commands
 
+//Split the given arguments into arg1 and arg2
+//Either or both argument can have quotations
+//If an argument does not have quotations, it is space-delimiter tokenized
+void smart_split(char *args, char *arg1, char *arg2) {
+    //Trim whitespace from arguments
+    int start, end;
+    trim_whitespace(args, &start, &end);
+    if(end <= start) {
+        return;
+    }
+
+    //Check if arg1 has quotations
+    int arg1_end, arg2_start;
+    int arg1_q = 0;
+    if(args[start] == '"') {
+        arg1_q = 1;
+        //Increment start so we don't include the quotation mark
+        start++;
+        for(arg1_end = start; arg1_end < end; arg1_end++)
+            if(args[arg1_end] == '"')
+                break;
+        //Don't incremenet arg1_end so we don't include the quotation mark
+        //arg1_end++;
+        arg1 = malloc(arg1_end - start + 1);
+        strncpy(arg1, args + start, arg1_end - start);
+        arg1[arg1_end - start] = '\0';
+    }
+    else {
+        arg1 = strtok(args, " \n");
+        if(arg1 == NULL) {
+            return;
+        }
+        arg1_end = strlen(arg1) + start;
+        //Note that arg1 may be incorrect
+        //If the user has a filename or path with spaces
+        //and didn't put quotations around it, they'll get
+        //an error when we try to open the file
+    }
+
+    //Find where arg2 starts based on arg1
+    for(arg2_start = arg1_end + 1; arg2_start < end; arg2_start++)
+        if(args[arg2_start] != ' ')
+            break;
+    //Check if arg2 has quotations
+    if(args[arg2_start] == '"') {
+        arg2_start++;
+        for(; end > arg2_start; end--)
+            if(args[end] == '"')
+                break;
+        arg2 = malloc(end - arg2_start + 1);
+        strncpy(arg2, args + arg2_start, end - arg2_start);
+        arg2[end - arg2_start] = '\0';
+    }
+    else {
+        if(arg1_q)
+            arg2 = strtok(args + arg2_start, " \n");
+        else
+            arg2 = strtok(NULL, " \n");
+        if(arg2 == NULL) {
+            return;
+        }
+    }
+    printf("start      = %d\n", start);
+    printf("arg1_end   = %d\n", arg1_end);
+    printf("arg2_start = %d\n", arg2_start);
+    printf("end        = %d\n", end);
+    printf("arg1       = %s\n", arg1);
+    printf("arg2       = %s\n", arg2);
+}
+
+void trim_whitespace(char *name, int *start, int *end) {
+    //Find leading/trailing whitespace
+    int length = strlen(name);
+    for(*start = 0; *start < length; (*start)++)
+        if(name[*start] != ' ')
+            break;
+    for(*end = length - 1; *end > 0; (*end)--)
+        if(name[*end] != ' ')
+            break;
+    (*end)++; //Move end so that we copy up to, but not including, it
+}
 
 //Open the disk file for reading
 //Make sure to commit_disk() when done

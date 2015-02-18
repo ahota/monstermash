@@ -19,6 +19,7 @@ int main() {
     }
 
     // For persistency
+    /*
     FILE *disk = fopen(FS_PATH, "r");
     char root[2] = ".";
     if (disk != NULL) {
@@ -37,9 +38,12 @@ int main() {
         }
         fclose(disk);
     }
+    */
 
     //Let's mkfs for now
     mkfs();
+    char root[2] = ".";
+    cd(root);
 
     while(1) {
         printf("%s%s $ ", prompt, path);
@@ -62,9 +66,11 @@ void parse_input(char *input, int input_length) {
     }
     else if(strcmp(command, "mkdir") == 0) {
         //Send the next token of user input as an argument
-        make_dir(strtok(NULL, " \n"));
+        make_dir(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "ls") == 0) {
+        if(strtok(NULL, "\n") != NULL)
+            fprintf(stderr, YELLOW "Ignoring arguments\n" RESET);
         ls();
     }
     else if(strcmp(command, "cd") == 0) {
@@ -74,10 +80,11 @@ void parse_input(char *input, int input_length) {
         rmdir(strtok(NULL, " \n"));
     }
     else if(strcmp(command, "open") == 0) {
-        open(strtok(NULL, " \n"), strtok(NULL, " \n"));
+        //Send everything to open() and parse it there
+        open(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "close") == 0) {
-        close(strtok(NULL, " \n"));
+        close(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "write") == 0) {
         write(strtok(NULL, " \n"), atoi(strtok(NULL, " \n")));
@@ -112,7 +119,49 @@ void mkfs() {
 }
 
 void make_dir(char *name) {
-    directory_create(name, &inode_counter, &current_dir_inode);
+    //Check if name is NULL, empty, or contains a /
+    if(name == NULL || strlen(name) == 0 || strchr(name, '/') != NULL) {
+        fprintf(stderr, BOLDRED "Invalid directory name\n" RESET);
+        return;
+    }
+
+    //Get any whitespace trimmed
+    int start, end;
+    trim_whitespace(name, &start, &end);
+    //Name was all spaces
+    if(end <= start) {
+        fprintf(stderr, BOLDRED "Invalid directory name\n" RESET);
+        return;
+    }
+    char *trimmed;
+    //Check if argument starts with quotation mark
+    if(name[start] == '"') {
+        //Check that it ends with quotation mark
+        if(name[end - 1] == '"') {
+            //Name is too long
+            if((end - 1) - (start + 1) > 32) {
+                fprintf(stderr, BOLDRED "Directory name must be %d "
+                        "or fewer characters long\n" RESET,
+                        MAX_FILENAME_LENGTH);
+                return;
+            }
+            trimmed = malloc((end - 1) - (start + 1) + 1);
+            strncpy(trimmed, name + start + 1, (end - 1) - (start + 1));
+            trimmed[(end - 1) - (start + 1)];
+        }
+        else {
+            fprintf(stderr, BOLDRED "Mismatched quotation\n" RESET);
+            return;
+        }
+    }
+    else {
+        trimmed = strtok(name, " \n");
+        if(strtok(NULL, " \n") != NULL)
+            fprintf(stderr, YELLOW "Ignoring arguments after space\n" RESET);
+    }
+
+    //Finally create the directory
+    directory_create(trimmed, &inode_counter, &current_dir_inode);
 }
 
 void ls() {
@@ -120,6 +169,10 @@ void ls() {
 }
 
 void cd(char *name) {
+    if(name == NULL || strlen(name) == 0) {
+        fprintf(stderr, BOLDRED "Invalid argument\n" RESET);
+        return;
+    }
     current_dir_inode = ch_dir(name, &current_dir_inode);
     update_prompt(current_dir_inode, path);
 }
@@ -128,7 +181,83 @@ void rmdir(char *name) {
     directory_remove(name, &current_dir_inode);
 }
 
-void open(char *flag, char *name) {
+void open(char *file_flag) {
+    //Input has filename (potentially with spaces) and flag
+    
+    printf("file_flag: %s\n", file_flag);
+
+    char *name, *flag;
+    smart_split(file_flag, name, flag);
+    printf("open()\n");
+    printf("name       = %s\n", name);
+    printf("flag       = %s\n", flag);
+    if(name == NULL || strlen(name) == 0) {
+        fprintf(stderr, BOLDRED "Invalid file name\n" RESET);
+        return;
+    }
+    if(flag == NULL || strlen(flag) == 0) {
+        fprintf(stderr, BOLDRED "Must provide file access flag: "
+                "'r', 'w', or 'rw'\n" RESET);
+        return;
+    }
+    if(strcmp(flag, "r" ) != 0 &&
+       strcmp(flag, "w" ) != 0 &&
+       strcmp(flag, "rw") != 0) {
+        fprintf(stderr, BOLDRED "Invalid flag. Must be one of 'r',"
+                "'w', or 'rw'\n" RESET);
+        return;
+    }
+
+    /*
+    int start, end;
+    trim_whitespace(file_flag, &start, &end);
+    if(end <= start) {
+        fprintf(stderr, BOLDRED "Invalid \n" RESET);
+        return;
+    }
+
+    //end points to the character after the flag
+    //name_end will point to the space just before the flag
+    int name_end;
+    for(name_end = end - 1; name_end > start; name_end--)
+        if(file_flag[name_end] == ' ')
+            break;
+
+    printf("start: %d\nname_end: %d\nend: %d\n", start, name_end, end);
+
+    char *flag = malloc(end - name_end);
+    strncpy(flag, file_flag + name_end + 1, end - name_end - 1);
+    flag[end - name_end - 1] = '\0';
+    //Check if the flag is valid
+    if(flag == NULL || strlen(flag) == 0) {
+        fprintf(stderr, BOLDRED "Invalid flag. "
+                "Must be 'r', 'w', or 'rw'\n" RESET);
+        return;
+    }
+
+    //Trim the name
+    for(; name_end > start; name_end--)
+        if(file_flag[name_end] != ' ')
+            break;
+    name_end++;
+    //Check if the name is too long or too short
+    if(name_end - start > 32) {
+        fprintf(stderr, BOLDRED "File name must be %d "
+                "or fewer characters long\n" RESET, MAX_FILENAME_LENGTH);
+        return;
+    }
+    if(name_end <= start) {
+        fprintf(stderr, BOLDRED "Invalid name\n" RESET);
+        return;
+    }
+    //name now has just the name
+    char *name = malloc(name_end - start + 1);
+    strncpy(name, file_flag + start, name_end - start);
+    name[name_end - start] = '\0';
+
+    printf("flag: %s\nname: |%s|\n", flag, name);
+    */
+
     int fd = 0;
     /*
     Check if file exists
@@ -150,7 +279,7 @@ void open(char *flag, char *name) {
     fd = file_exists(name, &current_dir_inode);
     if (fd == -1) {
         if (strcmp(flag, "r") == 0) {
-            fprintf(stderr, "File does not exist.\n");
+            fprintf(stderr, BOLDRED "File does not exist.\n" RESET);
             return;
         }
         else {
@@ -161,7 +290,8 @@ void open(char *flag, char *name) {
     int i;
     for(i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
         if (open_files[i] == fd) {
-            fprintf(stderr, "File is already open with file descriptor %d!\n", fd);
+            fprintf(stderr, BOLDRED "File is already open with file "
+                    "descriptor %d\n" RESET, fd);
             return;
         }
     }
@@ -173,12 +303,19 @@ void open(char *flag, char *name) {
             n_open_files++;
         }
     }
-    printf("Opened file %s with file descriptor %d\n", name, fd);
+    printf("Opened file `%s` with file descriptor %d\n", name, fd);
     return;
 }
 
 void close(char *name) {
-    int fd = file_exists(name, &current_dir_inode);
+    //name may have leading/trailing white space
+    int start, end;
+    trim_whitespace(name, &start, &end);
+    char *trimmed = malloc(end - start + 1);
+    strncpy(trimmed, name + start, end - start);
+    trimmed[end - start] = '\0';
+
+    int fd = file_exists(trimmed, &current_dir_inode);
     int i;
     for(i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
         if (open_files[i] == fd) {
@@ -186,11 +323,11 @@ void close(char *name) {
             open_files[i+1] = 0;
             open_files[i+2] = 0;
             n_open_files--;
-        }
-        else {
-            fprintf(stderr, "File does not exist\n");   
+            printf("Closed file %s (fd = %d)\n", trimmed, fd);
+            return;
         }
     }
+    fprintf(stderr, BOLDRED "File not found\n" RESET);
 }
 
 void write(char *text, int fd) {
@@ -207,7 +344,8 @@ void write(char *text, int fd) {
     for(i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
         if (open_files[i] == fd) {
             if (open_files[i + 1] == 1) {
-                fprintf(stderr, BOLDRED "Cannot write. File opened for reading only. \n" RESET);
+                fprintf(stderr, BOLDRED "Cannot write. File opened for "
+                        "reading only. \n" RESET);
                 return;
             }
             else {
@@ -241,7 +379,8 @@ void read(int size, int fd) {
     for(i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
         if (open_files[i] == fd) {
             if (open_files[i + 1] == 2) {
-                fprintf(stderr, BOLDRED "Cannot read. File opened for writing only. \n" RESET);
+                fprintf(stderr, BOLDRED "Cannot read. File opened for "
+                        "writing only. \n" RESET);
                 return;
             }
             else {
