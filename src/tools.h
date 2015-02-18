@@ -21,3 +21,6 @@ void link_create(char*, char*, short*, int*);
 char *get_parent_path(char *);
 char *get_filename(char *);
 void increment_link(int);
+int decrement_link(int);
+void link_remove(char *name, short *inode_counter, int *current_dir_inode); 
+void remove_file_from_dir(FILE *disk, int parent_offset, int inode_id);

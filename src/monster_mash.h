@@ -47,4 +47,4 @@ void write(char*, int);
 void seek(int, int);
 void read(int, int);
 void link(char*, char*);
-void unlink();
+void unlink(char*);

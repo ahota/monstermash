@@ -88,7 +88,7 @@ int block_create(char *name) {
     //Write the name
     fwrite(name, sizeof(char), strlen(name) + 1, disk);
     //Seek forward by 32 regardless of name length
-    fseek(disk, MAX_FILENAME_LENGTH, offset);
+    fseek(disk, offset + MAX_FILENAME_LENGTH, SEEK_SET);
     //Write a -1 to indicate no next block
     int empty_offset = -1;
     fwrite(&empty_offset, sizeof(int), 1, disk);
@@ -337,8 +337,22 @@ int file_exists(char *name, int *current_dir_inode) {
         fread(&inode_id, sizeof(int), 1, disk);
         fread(temp_name, sizeof(char), MAX_FILENAME_LENGTH, disk);
         if (strcmp(name, temp_name) == 0) {
+            //Check to see if this is a link or not
+            int offset = find_inode_offset(inode_id);
+            fseek(disk, offset, SEEK_SET);
+            char type;
+            fread(&type, sizeof(char), 1, disk);
+            int ret_id = inode_id;
+            if (type == 'l') {
+                int data_block_offset;
+                fseek(disk, sizeof(short), SEEK_CUR);
+                fread(&data_block_offset, sizeof(int), 1, disk);
+                fseek(disk, data_block_offset + METADATA_SIZE, SEEK_SET);
+                printf("looking at %d\n", data_block_offset + METADATA_SIZE);
+                fread(&ret_id, sizeof(int), 1, disk);
+            }
             commit_disk(disk);
-            return inode_id;
+            return ret_id;
         }
     }
     commit_disk(disk);
@@ -368,9 +382,16 @@ void link_create(char *name, char *src, short *inode_counter, int *current_dir_i
     //Search current dir and find the inode id for src
     int src_inode_id = find_inode_id(src_inode_offset);
 
-    char src_inode_text[33];
-    sprintf(src_inode_text, "%d", src_inode_id);
-    write_data(inode_id, 0, src_inode_text);
+    //char src_inode_text[33];
+    //sprintf(src_inode_text, "%d", src_inode_id);
+    //write_data(inode_id, 0, src_inode_text);
+    FILE *disk = access_disk(0);
+    fseek(disk, find_inode_offset(inode_id) + 3, SEEK_SET);
+    int data_block_offset;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    fseek(disk, data_block_offset + METADATA_SIZE, SEEK_SET);
+    fwrite(&src_inode_id, sizeof(int), 1, disk);
+
     increment_link(src_inode_offset);
 
     if(strcmp(link_parent, ".") != 0) {
@@ -386,11 +407,100 @@ void increment_link(int target_inode_offset) {
     fseek(disk, data_block_offset + METADATA_SIZE - sizeof(short), SEEK_SET);
     short count = -1;
     fread(&count, sizeof(short), 1, disk);
-    printf("%d -> ", count++);
-    printf("%d\n", count);
+    count++;
     fseek(disk, -1 * sizeof(short), SEEK_CUR);
     fwrite(&count, sizeof(short), 1, disk);
     commit_disk(disk);
+}
+
+void link_remove(char *name, short *inode_counter, int *current_dir_inode) {
+    int link_inode_offset = expand_path(name, current_dir_inode);
+    if (link_inode_offset == -1) {
+        return;
+    }
+    int link_inode_id = find_inode_id(link_inode_offset);
+    FILE *disk = access_disk(0);
+    char type = '0';
+    fseek(disk, link_inode_offset, SEEK_SET);
+    fread(&type, sizeof(char), 1, disk);
+    
+    //Get the data block offset
+    fseek(disk, sizeof(short), SEEK_CUR);
+    int data_block_offset;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+
+    if (type == 'l') {
+        //Remove the link inode   
+        //Go to the data block and find the target inode
+        //Delete the data block
+        //Decrement using target inode and delete that inode and its data if necessary
+        wipe(disk, link_inode_offset, INODE_SIZE);
+        fseek(disk, data_block_offset + METADATA_SIZE, SEEK_SET);
+        printf("Position of data in link: %d\n", data_block_offset + METADATA_SIZE);
+        int target_inode_id;
+        fread(&target_inode_id, sizeof(int), 1, disk);
+        
+        //wipe link data
+        wipe(disk, data_block_offset, BLOCK_SIZE);
+        int target_inode_offset = find_inode_offset(target_inode_id);
+        int target_link_count = decrement_link(target_inode_offset);
+        if (target_link_count == 0) {
+            //Delete the original inode and its data
+            int target_data_block_offset;
+            fseek(disk, target_inode_offset + 3, SEEK_SET);
+            fread(&target_data_block_offset, sizeof(int), 1, disk);
+            wipe(disk, target_inode_offset, INODE_SIZE);
+            wipe(disk, target_data_block_offset, BLOCK_SIZE);
+        }
+        //Remove the link from the parent directory
+        remove_file_from_dir(disk, *current_dir_inode, link_inode_id);
+    }
+    else if (type == 'f') {
+        int target_link_count = decrement_link(link_inode_offset);
+        if (target_link_count == 0) {
+            wipe(disk, link_inode_offset, INODE_SIZE);
+            wipe(disk, data_block_offset, BLOCK_SIZE);
+        }
+        //Remove filename from parent directory
+        remove_file_from_dir(disk, *current_dir_inode, link_inode_id);
+    }
+    else {
+        fprintf(stderr, BOLDRED "Cannot unlink directories.\n" RESET);
+    }
+    return;
+}
+
+void remove_file_from_dir(FILE *disk, int parent_offset, int inode_id) {
+    fseek(disk, parent_offset + 3, SEEK_SET);
+    int parent_data_block_offset;
+    fread(&parent_data_block_offset, sizeof(int), 1, disk);
+    int i;
+    for (i = 0; i < 4058; i += DIR_TABLE_ENTRY_SIZE) {
+        fseek(disk, parent_data_block_offset + METADATA_SIZE + i, SEEK_SET);
+        int temp_id;
+        fread(&temp_id, sizeof(int), 1, disk);
+        if (temp_id == inode_id) {
+            wipe(disk, parent_data_block_offset + METADATA_SIZE + i, DIR_TABLE_ENTRY_SIZE);//phew
+            break;
+        }
+    }
+}
+
+//Dear future us, 
+//Sorry for copying this from increment_link. We have no time. 
+int decrement_link(int target_inode_offset) {
+    FILE *disk = access_disk(0);
+    int data_block_offset = -1;
+    fseek(disk, target_inode_offset + 3 , SEEK_SET);
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    fseek(disk, data_block_offset + METADATA_SIZE - sizeof(short), SEEK_SET);
+    short count = -1;
+    fread(&count, sizeof(short), 1, disk);
+    count--;
+    fseek(disk, -1 * sizeof(short), SEEK_CUR);
+    fwrite(&count, sizeof(short), 1, disk);
+    commit_disk(disk);
+    return count;
 }
 
 void write_data(int fd, int file_offset, char *text) {
