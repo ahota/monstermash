@@ -8,6 +8,10 @@ char *prompt = "monster@test:";
 char *path;
 int *open_files;
 
+//Just for fun
+char prompt_colors[][10] = {BOLDRED, BOLDGREEN, BOLDYELLOW, BOLDBLUE,
+    BOLDMAGENTA, BOLDCYAN, BOLDWHITE};
+
 int main() {
     printf("They did the monster mash!\n");
     char *user_input = malloc(INPUT_BUFFER_SIZE);
@@ -17,6 +21,8 @@ int main() {
     for(i = 0; i < MAX_OPEN_FILES * 3; i++) {
         open_files[i] = 0;
     }
+
+    srand(time(NULL));
 
     // For persistency
     /*
@@ -46,7 +52,7 @@ int main() {
     cd(root);
 
     while(1) {
-        printf("%s%s $ ", prompt, path);
+        printf("%s%s%s%s $ ", prompt_colors[rand()%7], prompt, RESET, path);
         fflush(NULL);
         fgets(user_input, INPUT_BUFFER_SIZE, stdin);
         int input_length = strlen(user_input);
@@ -87,7 +93,7 @@ void parse_input(char *input, int input_length) {
         close(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "write") == 0) {
-        write(strtok(NULL, " \n"), atoi(strtok(NULL, " \n")));
+        write(strtok(NULL, "\n"), atoi(strtok(NULL, " \n")));
     }
     else if(strcmp(command, "seek") == 0) {
         seek(atoi(strtok(NULL, " \n")), atoi(strtok(NULL, " \n")));
@@ -160,6 +166,12 @@ void make_dir(char *name) {
             fprintf(stderr, YELLOW "Ignoring arguments after space\n" RESET);
     }
 
+    //Check if this directory already exists
+    if(file_exists(name, &current_dir_inode) != -1) {
+        fprintf(stderr, BOLDRED "Directory named `%s` already exists\n"
+                RESET, name);
+        return;
+    }
     //Finally create the directory
     directory_create(trimmed, &inode_counter, &current_dir_inode);
 }
@@ -288,6 +300,7 @@ void open(char *file_flag) {
     }
     //Check if it's already open
     int i;
+    printf("fd = %d\n", fd);
     for(i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
         if (open_files[i] == fd) {
             fprintf(stderr, BOLDRED "File is already open with file "
@@ -301,6 +314,7 @@ void open(char *file_flag) {
             open_files[i+1] = (strcmp(flag, "r") == 0) ? 1 : ((strcmp(flag, "w") == 0) ? 2 : 3);
             open_files[i+2] = 0;
             n_open_files++;
+            break;
         }
     }
     printf("Opened file `%s` with file descriptor %d\n", name, fd);
@@ -310,13 +324,32 @@ void open(char *file_flag) {
 void close(char *name) {
     //name may have leading/trailing white space
     int start, end;
+    char *trimmed;
     trim_whitespace(name, &start, &end);
-    char *trimmed = malloc(end - start + 1);
-    strncpy(trimmed, name + start, end - start);
-    trimmed[end - start] = '\0';
+    if(name[start] == '"') {
+        if(name[end - 1] == '"') {
+            trimmed = malloc((end - 1) - (start + 1) + 1);
+            strncpy(trimmed, name + start + 1, (end - 1) - (start + 1));
+            trimmed[(end - 1) - (start + 1)] = '\0';
+        }
+        else {
+            fprintf(stderr, BOLDRED "Mismatched quotation\n" RESET);
+            return;
+        }
+    }
+    else {
+        trimmed = strtok(name, " \n");
+        if(strtok(NULL, " \n") != NULL)
+            fprintf(stderr, BOLDYELLOW "Ignoring argument past space\n" RESET);
+    }
 
     int fd = file_exists(trimmed, &current_dir_inode);
+    if(fd == -1) {
+        fprintf(stderr, BOLDRED "Invalid file argument\n" RESET);
+        return;
+    }
     int i;
+    printf("fd = %d\n", fd);
     for(i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
         if (open_files[i] == fd) {
             open_files[i] = 0;

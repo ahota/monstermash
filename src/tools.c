@@ -27,7 +27,7 @@ void smart_split(char *args, char **arg1, char **arg2) {
         //arg1_end++;
         *arg1 = malloc(arg1_end - start + 1);
         strncpy(*arg1, args + start, arg1_end - start);
-        *arg1[arg1_end - start] = '\0';
+        *(*arg1 + arg1_end - start) = '\0';
     }
     else {
         *arg1 = strtok(args, " \n");
@@ -53,7 +53,7 @@ void smart_split(char *args, char **arg1, char **arg2) {
                 break;
         *arg2 = malloc(end - arg2_start + 1);
         strncpy(*arg2, args + arg2_start, end - arg2_start);
-        *arg2[end - arg2_start] = '\0';
+        *(*arg2 + end - arg2_start) = '\0';
     }
     else {
         if(arg1_q)

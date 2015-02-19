@@ -3,6 +3,7 @@
 #include<string.h>
 #include<assert.h>
 #include<sys/stat.h>
+#include<time.h>
 
 #define INPUT_BUFFER_SIZE 1024
 #define BLOCKS_PER_INODE 10
