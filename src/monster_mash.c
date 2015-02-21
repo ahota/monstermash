@@ -108,6 +108,9 @@ void parse_input(char *input, int input_length) {
     else if(strcmp(command, "unlink") == 0) {
         unlink(strtok(NULL, " \n"));
     }
+    else if(strcmp(command, "cat") == 0) {
+        cat(strtok(NULL, "\n"));
+    }
     else if(strcmp(command, "exit") == 0) {
         printf("Bye!\n");
         exit(0);
@@ -194,7 +197,7 @@ void rmdir(char *name) {
     directory_remove(name, &current_dir_inode);
 }
 
-void open(char *file_flag) {
+int open(char *file_flag) {
     //Input has filename (potentially with spaces) and flag
     
     printf("file_flag: %s\n", file_flag);
@@ -206,19 +209,19 @@ void open(char *file_flag) {
     printf("flag       = %s\n", flag);
     if(name == NULL || strlen(name) == 0) {
         fprintf(stderr, BOLDRED "Invalid file name\n" RESET);
-        return;
+        return -1;
     }
     if(flag == NULL || strlen(flag) == 0) {
         fprintf(stderr, BOLDRED "Must provide file access flag: "
                 "'r', 'w', or 'rw'\n" RESET);
-        return;
+        return -1;
     }
     if(strcmp(flag, "r" ) != 0 &&
        strcmp(flag, "w" ) != 0 &&
        strcmp(flag, "rw") != 0) {
         fprintf(stderr, BOLDRED "Invalid flag. Must be one of 'r',"
                 "'w', or 'rw'\n" RESET);
-        return;
+        return -1;
     }
 
     /*
@@ -293,7 +296,7 @@ void open(char *file_flag) {
     if (fd == -1) {
         if (strcmp(flag, "r") == 0) {
             fprintf(stderr, BOLDRED "File does not exist.\n" RESET);
-            return;
+            return -1;
         }
         else {
             fd = file_create(name, &inode_counter, &current_dir_inode);
@@ -306,7 +309,7 @@ void open(char *file_flag) {
         if (open_files[i] == fd) {
             fprintf(stderr, BOLDRED "File is already open with file "
                     "descriptor %d\n" RESET, fd);
-            return;
+            return fd;
         }
     }
     for(i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
@@ -319,7 +322,7 @@ void open(char *file_flag) {
         }
     }
     printf("Opened file `%s` with file descriptor %d\n", name, fd);
-    return;
+    return fd;
 }
 
 void close(char *name) {
@@ -439,3 +442,18 @@ void link(char *dest, char *src) {
 void unlink(char *name) {
     link_remove(name, &inode_counter, &current_dir_inode);
 }
+
+void cat(char *name) {
+    int len = strlen(name);
+    char *file_flag = malloc(strlen(name) + 3);
+    strcpy(file_flag, name);
+    file_flag[len] = ' ';
+    file_flag[len + 1] = 'r';
+    file_flag[len + 2] = '\n';
+    int fd = open(file_flag);
+    if (fd != -1) {
+        read(DISK_SIZE, fd);
+        close(name);    
+    }
+}
+

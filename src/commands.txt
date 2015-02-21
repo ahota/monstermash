@@ -1,4 +1,4 @@
-mkfs
-mkdir test
+mkdir something
+mkdir hello
 ls
 exit
