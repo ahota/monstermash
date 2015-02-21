@@ -590,11 +590,42 @@ void write_data(int fd, int file_offset, char *text) {
     fseek(disk, inode_offset + 3, SEEK_SET);
     int data_block_offset = 0;
     fread(&data_block_offset, sizeof(int), 1, disk);
-    fseek(disk, data_block_offset + METADATA_SIZE + file_offset, SEEK_SET);
+
+    //Figure out how many blocks to skip and what file_offset will be in the destination
     int i;
+    int dest_file_offset = file_offset % (BLOCK_SIZE - METADATA_SIZE);
+    int n_skip_blocks = file_offset / (BLOCK_SIZE - METADATA_SIZE);
+
+    printf(YELLOW "DEBUG: DEST_FILE_OFFSET: %d\nSKIP_BLOCKS: %d\n" RESET, dest_file_offset, n_skip_blocks);
+    for (i = 0; i < n_skip_blocks; i++) {
+        fseek(disk, data_block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
+        fread(&data_block_offset, sizeof(int), 1, disk);
+        if (data_block_offset == -1) {
+            fprintf(stderr, BOLDRED "ERROR: Cannot write past end of file\n" RESET);
+            commit_disk(disk);
+            return;
+        } 
+    } 
+
+    fseek(disk, data_block_offset + METADATA_SIZE + dest_file_offset, SEEK_SET);
+
     int len = strlen(text);
-    fwrite(text, sizeof(char), len, disk);
-    commit_disk(disk);
+    int free_space = BLOCK_SIZE - METADATA_SIZE - dest_file_offset;
+    if (free_space > len) {
+        fwrite(text, sizeof(char), len, disk);
+        commit_disk(disk);
+    }
+    else {
+        char *section = malloc(free_space);
+        strncpy(section, text, free_space);
+        fwrite(section, sizeof(char), free_space, disk);
+        //Write next block's offset to this block's metadata
+        int next_block = block_create("CONTINUED");
+        fseek(disk, data_block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
+        fwrite(&next_block, sizeof(int), 1, disk);
+        commit_disk(disk);
+        write_data(fd, file_offset + free_space, text + free_space);
+    }
 }
 
 void read_data(int fd, int file_offset, int size) {

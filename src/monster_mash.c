@@ -14,7 +14,6 @@ char prompt_colors[][10] = {BOLDRED, BOLDGREEN, BOLDYELLOW, BOLDBLUE,
 
 int main() {
     printf("They did the monster mash!\n");
-    char *user_input = malloc(INPUT_BUFFER_SIZE);
     path = malloc(MAX_FILENAME_LENGTH);
     open_files = malloc(MAX_OPEN_FILES * 3 * sizeof(int)); //Half of it is used for flags
     int i;
@@ -24,40 +23,42 @@ int main() {
 
     srand(time(NULL));
 
-    // For persistency
-    /*
-    FILE *disk = fopen(FS_PATH, "r");
-    char root[2] = ".";
-    if (disk != NULL) {
-        cd(root);
-        int i;
-        for (i = 0; i < INODE_TABLE_SIZE; i += INODE_SIZE) {
-            fseek(disk, i + 1, SEEK_SET);
-            short inode_id = 0;
-            fread(&inode_id, sizeof(short), 1, disk);
-            if (inode_id != 0) {
-                inode_counter++;
-            }
-            else {
-                break;
-            }
-        }
-        fclose(disk);
-    }
-    */
-
     //Let's mkfs for now
     mkfs();
     char root[2] = ".";
     cd(root);
 
     while(1) {
+        char *user_input = malloc(INPUT_BUFFER_SIZE);
+        int current_input_size = INPUT_BUFFER_SIZE;
+    
         printf("%s%s%s%s $ ", prompt_colors[rand()%7], prompt, RESET, path);
         fflush(NULL);
-        fgets(user_input, INPUT_BUFFER_SIZE, stdin);
+
+        if (user_input != NULL) {
+            int c = EOF;
+            int i = 0;
+            while((c = getchar()) != '\n' && c != EOF) {
+                user_input[i++] = c;
+                if (i == current_input_size) {
+                    //Reallocate more space
+                    current_input_size = i + INPUT_BUFFER_SIZE;
+                    user_input = realloc(user_input, current_input_size);
+                }
+            }            
+            user_input[i] = '\0';
+        }
+        else {
+            fprintf(stderr, "Memory error!\n");
+            break;
+        }
+
         int input_length = strlen(user_input);
-        if(user_input[0] != '\n')
+        if(user_input[0] != '\n') {
             parse_input(user_input, input_length);
+        }
+
+        free(user_input);
     }
     return 0;
 }
@@ -383,7 +384,7 @@ void write(char *text, int fd) {
             }
             else {
                 write_data(fd, open_files[i+2], text);
-                open_files[i+2] += strlen(text);
+                open_files[i+2] += strlen(text); //Add to the file offset
                 return;
             }
         }

@@ -5,7 +5,7 @@
 #include<sys/stat.h>
 #include<time.h>
 
-#define INPUT_BUFFER_SIZE 1024
+#define INPUT_BUFFER_SIZE 128 //Initial size, dynamic reallocation is used
 #define BLOCKS_PER_INODE 10
 #define BLOCK_SIZE 4096
 #define DISK_SIZE 104857600
