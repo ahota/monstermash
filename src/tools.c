@@ -194,6 +194,7 @@ int disk_create(short *inode_counter) {
     return directory_create("/", inode_counter, NULL);
 }
 
+//Supposed to find an empty place in the given data block and write the name and inode_id
 int insert_entry(int block_offset, char *name, short inode_id) {
     FILE *disk = access_disk(0);
     int i;
@@ -206,8 +207,9 @@ int insert_entry(int block_offset, char *name, short inode_id) {
         fread(&risk, sizeof(char), 1, disk);
         //Space exists and it's not . or ..
         if(temp_id == 0 && risk != '.') {
-            fseek(disk, block_offset + METADATA_SIZE + i, SEEK_SET);
-            fwrite(&inode_id, sizeof(int), 1, disk);
+            fseek(disk, block_offset + METADATA_SIZE + i, SEEK_SET);//Seek back
+            fwrite(&inode_id, sizeof(short), 1, disk);
+            fseek(disk, sizeof(short), SEEK_CUR);
             fwrite(name, sizeof(char), strlen(name), disk);
             commit_disk(disk);
             return 0;
@@ -224,51 +226,17 @@ void write_dir_data(char *name, int *current_dir_inode, short inode_id) {
     fseek(disk, *current_dir_inode + 3, SEEK_SET);
     int block_offset = 0;
     fread(&block_offset, sizeof(int), 1, disk);
-
     while(insert_entry(block_offset, name, inode_id) != 0) {
         fseek(disk, block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
-        fread(&block_offset, sizeof(int), 1, disk);
-        if(block_offset == -1) {
-            block_offset = block_create("CONTINUED");
-        }
-    }
-    /*
-    int i;
-    for (i = 0; i < 4058; i += DIR_TABLE_ENTRY_SIZE) {
-        int temp_id = 0;
-        fseek(disk, block_offset + METADATA_SIZE + i, SEEK_SET);
-        fread(&temp_id, sizeof(int), 1, disk);
-        char temp_name;
-        fread(&temp_name, sizeof(char), 1, disk);
-        if (temp_id == 0 && temp_name != '.') {
-            break;
-        }
-    }
-    if (i >= 4058) {
-        //If no next block:
-            //Create next block
-        //Call this function on next block
-        fseek(disk, block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
-        int next_block;
-        fread(&next_block, sizeof(int), 1, disk);
-        wlog("Next block id: %d\n", next_block);
-        if (next_block == -1) {
-            next_block = block_create("CONTINUED");
+        int next_block_offset;
+        fread(&next_block_offset, sizeof(int), 1, disk);
+        if(next_block_offset == -1) {
+            next_block_offset = block_create("CONTINUED");
             fseek(disk, block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
-            fwrite(&next_block, sizeof(int), 1, disk);
+            fwrite(&next_block_offset, sizeof(int), 1, disk);
         }
-        write_dir_data(name, &next_block, inode_id);
-        
+        block_offset = next_block_offset;
     }
-    else {
-        //Go back and write the id
-        fseek(disk, -1 * (sizeof(int) + 1), SEEK_CUR);
-        //Write the new file/dir inode id
-        fwrite(&inode_id, sizeof(int), 1, disk);
-        printf("%d\n", inode_id);
-        fwrite(name, sizeof(char), strlen(name), disk);
-    }
-    */
     commit_disk(disk);
 }
 
@@ -348,7 +316,7 @@ void ls_dir(int current_dir_inode) {
 
 //Go to a directory
 int ch_dir(char *name, int *current_dir_inode) {
-    int temp_dir_inode = expand_path(name, current_dir_inode);
+    int temp_dir_inode = expand_path(name, current_dir_inode, 1);
     if(temp_dir_inode != -1) {
         return temp_dir_inode;
     }
@@ -449,7 +417,7 @@ int directory_remove(char *name, int *current_dir_inode) {
     return 0;
 }
 
-int file_exists(char *name, int *current_dir_inode) {
+int file_exists(char *name, int *current_dir_inode, int shallow) {
     FILE *disk = access_disk(0);
     fseek(disk, (*current_dir_inode) + 3, SEEK_SET);
     int data_block_offset = 0;
@@ -468,7 +436,7 @@ int file_exists(char *name, int *current_dir_inode) {
             char type;
             fread(&type, sizeof(char), 1, disk);
             int ret_id = inode_id;
-            if (type == 'l') {
+            if (type == 'l' && !shallow) {
                 int data_block_offset;
                 fseek(disk, sizeof(short), SEEK_CUR);
                 fread(&data_block_offset, sizeof(int), 1, disk);
@@ -493,12 +461,12 @@ int file_create(char *name, short *inode_counter, int *current_dir_inode) {
 //Create a link `name` pointing to target `src`
 void link_create(char *name, char *src, short *inode_counter, int *current_dir_inode) {
     //If the user enters paths, find the target, the link's directory, and the link's name
-    int src_inode_offset = expand_path(src, current_dir_inode);
+    int src_inode_offset = expand_path(src, current_dir_inode, 0);
     char *link_parent = get_parent_path(name);
     char *link_name = get_filename(name);
 
     //The inode the link will be under
-    int link_parent_inode_offset = expand_path(link_parent, current_dir_inode);
+    int link_parent_inode_offset = expand_path(link_parent, current_dir_inode, 1);
 
     //The link's inode
     short inode_id = inode_create(link_name, 'l', inode_counter);
@@ -539,7 +507,7 @@ void increment_link(int target_inode_offset) {
 }
 
 void link_remove(char *name, short *inode_counter, int *current_dir_inode) {
-    int link_inode_offset = expand_path(name, current_dir_inode);
+    int link_inode_offset = expand_path(name, current_dir_inode, 1);
     if (link_inode_offset == -1) {
         return;
     }
@@ -604,9 +572,10 @@ void remove_file_from_dir(FILE *disk, int parent_offset, int inode_id) {
         fseek(disk, parent_data_block_offset + METADATA_SIZE + i, SEEK_SET);
         int temp_id;
         fread(&temp_id, sizeof(int), 1, disk);
+        wlog("temp_id: %d\tinode_id: %d\n", temp_id, inode_id);
         if (temp_id == inode_id) {
             wipe(disk, parent_data_block_offset + METADATA_SIZE + i, DIR_TABLE_ENTRY_SIZE);//phew
-            break;
+            return;
         }
     }
 }
@@ -715,7 +684,7 @@ void read_data(int fd, int file_offset, int size) {
     printf("\n");
 }
 
-int expand_path(char *path, int *current_dir_inode) {
+int expand_path(char *path, int *current_dir_inode, int shallow) {
     if(strcmp(path, ".") == 0) {
         return *current_dir_inode;
     }
@@ -729,7 +698,7 @@ int expand_path(char *path, int *current_dir_inode) {
          * Go to its inode
          */
         printf("Looking for: %s\n", token);
-        int file_check = file_exists(token, &temp_dir_inode);
+        int file_check = file_exists(token, &temp_dir_inode, shallow);
         if(file_check == -1) {
             fprintf(stderr, BOLDRED "Invalid path\n" RESET);
             return -1;

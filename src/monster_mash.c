@@ -184,7 +184,7 @@ void make_dir(char *name) {
     }
 
     //Check if this directory already exists
-    if(file_exists(name, &current_dir_inode) != -1) {
+    if(file_exists(name, &current_dir_inode, 1) != -1) {
         fprintf(stderr, BOLDRED "Directory named `%s` already exists\n"
                 RESET, name);
         return;
@@ -305,7 +305,7 @@ int open(char *file_flag) {
         increment number of open files
 
     */
-    fd = file_exists(name, &current_dir_inode);
+    fd = file_exists(name, &current_dir_inode, 0);
     if (fd == -1) {
         if (strcmp(flag, "r") == 0) {
             fprintf(stderr, BOLDRED "File does not exist.\n" RESET);
@@ -359,7 +359,7 @@ void close(char *name) {
             fprintf(stderr, BOLDYELLOW "Ignoring argument past space\n" RESET);
     }
 
-    int fd = file_exists(trimmed, &current_dir_inode);
+    int fd = file_exists(trimmed, &current_dir_inode, 0);
     if(fd == -1) {
         fprintf(stderr, BOLDRED "Invalid file argument\n" RESET);
         return;
@@ -509,7 +509,7 @@ void wlog(char *format, ...) {
 void cp(char *dest, char *src) {
     verbose = 0;
     int current_dir = current_dir_inode;
-    int src_fd = find_inode_id(expand_path(src, &current_dir_inode));
+    int src_fd = find_inode_id(expand_path(src, &current_dir_inode, 0));
     char *dest_parent = get_parent_path(dest);
     char *dest_name = get_filename(dest);
     cd(dest_parent);
