@@ -724,3 +724,45 @@ char *get_filename(char *path) {
 }
 
 
+void copy_data(int fd, int file_offset, int size, int dest_fd) {
+    int inode_offset = find_inode_offset(fd);
+    FILE *disk = access_disk(0);
+    fseek(disk, inode_offset + 3, SEEK_SET);
+    int data_block_offset = 0;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    
+    //Figure out how many blocks to skip and what file_offset will be in the destination
+    int i;
+    int dest_file_offset = file_offset % (BLOCK_SIZE - METADATA_SIZE);
+    int n_skip_blocks = file_offset / (BLOCK_SIZE - METADATA_SIZE);
+
+    for (i = 0; i < n_skip_blocks; i++) {
+        fseek(disk, data_block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
+        int potential_next_block_offset;
+        fread(&potential_next_block_offset, sizeof(int), 1, disk);
+        if (potential_next_block_offset != -1) {
+            data_block_offset = potential_next_block_offset;
+        }
+    } 
+    fseek(disk, data_block_offset + METADATA_SIZE + dest_file_offset, SEEK_SET);
+
+    int this_block_text = BLOCK_SIZE - METADATA_SIZE - dest_file_offset;
+    char *text = malloc(this_block_text + 1);
+    fread(text, sizeof(char), this_block_text, disk);
+    text[this_block_text] = '\0';
+    write(text, dest_fd);
+    free(text);
+
+    if (size > this_block_text) {
+        int leftover = size - this_block_text;
+        //Get next block's offset and read from it
+        fseek(disk, data_block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
+        fread(&data_block_offset, sizeof(int), 1, disk);
+        if (data_block_offset != -1) {
+            commit_disk(disk);   
+            read_data(fd, file_offset + this_block_text, leftover);
+            return;
+        }
+    }
+    commit_disk(disk);
+}
