@@ -215,7 +215,20 @@ void write_dir_data(char *name, int *current_dir_inode, short inode_id) {
         }
     }
     if (i >= 4058) {
-        //Go to next block
+        //If no next block:
+            //Create next block
+        //Call this function on next block
+        fseek(disk, block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
+        int next_block;
+        fread(&next_block, sizeof(int), 1, disk);
+        wlog("Next block id: %d\n", next_block);
+        if (next_block == -1) {
+            next_block = block_create("CONTINUED");
+            fseek(disk, block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
+            fwrite(&next_block, sizeof(int), 1, disk);
+        }
+        write_dir_data(name, &next_block, inode_id);
+        
     }
     else {
         //Go back and write the id
@@ -767,17 +780,22 @@ void copy_data(int fd, int file_offset, int size, int dest_fd) {
     commit_disk(disk);
 }
 
-void print_space(num) {
+void print_space(int num, int corner) {
     int i;
     if (num == 0) {
         return;
     }
-    for (i = 0; i < num - 4; i++) {
+    for (i = 0; i < num - 2; i++) {
         printf(" ");
     }
-    for (i = 0; i < 4; i++) 
+    for (i = 0; i < 2; i++) 
     {
-        printf("%c", '-');
+        if (corner && !i)
+            printf("\xe2\x94\x9c");
+        else if(!i)
+            printf("\xe2\x94\x9c");
+        char *line = "\xe2\x94\x80";
+        printf("%s", line);
     }
 }
 
@@ -791,6 +809,7 @@ void print_tree(int current_dir_inode, int depth) {
     
     int i;
     char *name = malloc(33);
+    int file_counter = 1;
     for (i = 0; i < 4058; i += DIR_TABLE_ENTRY_SIZE) {
         //Go to current entry in inode table
         fseek(disk, data_block_offset + METADATA_SIZE + i, SEEK_SET);
@@ -808,25 +827,27 @@ void print_tree(int current_dir_inode, int depth) {
             char type = 0;
             fread(&type, sizeof(char), 1, disk);
             if (type == 'd') {
-                print_space(depth);
-                printf(BOLDBLUE "%s\n" RESET, name);
                 if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
-                    print_tree(temp_inode_offset, depth + 4);
+                    print_space(depth, file_counter);
+                    printf(BOLDBLUE "%s\n" RESET, name);
+                    print_tree(temp_inode_offset, depth + 2);
+                    file_counter=0;
                 }
             }
             else if (type == 'f') {
-                print_space(depth);
+                print_space(depth, file_counter);
                 printf(RESET "%s\n" RESET, name);
+                file_counter=0;
             }
             else if (type == 'l'){
-                print_space(depth);
+                print_space(depth, file_counter);
                 printf(CYAN "%s\n" RESET, name); 
+                file_counter=0;
             }
             else {
                 fprintf(stderr, "Unknown element type %c\n", type);
             }
         }
     }
-    printf("\n");
     commit_disk(disk);
 }
