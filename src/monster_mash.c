@@ -112,6 +112,9 @@ void parse_input(char *input, int input_length) {
     else if(strcmp(command, "cat") == 0) {
         cat(strtok(NULL, "\n"));
     }
+    else if(strcmp(command, "import") == 0) {
+        import(strtok(NULL, " \n"), strtok(NULL, " \n"));
+    }
     else if(strcmp(command, "export") == 0) {
         export(strtok(NULL, " \n"), strtok(NULL, " \n"));
     }
@@ -457,6 +460,24 @@ void cat(char *name) {
     if (fd != -1) {
         read(DISK_SIZE, fd);
         close(name);    
+    }
+}
+
+void import(char *name, char *host_path) {
+    int len = strlen(name);
+    char *file_flag = malloc(strlen(name) + 3);
+    strcpy(file_flag, name);
+    file_flag[len] = ' ';
+    file_flag[len + 1] = 'w';
+    file_flag[len + 2] = '\n';
+    char buffer[1024];
+    int fd = open(file_flag);
+    if (fd != -1) {
+        FILE *hfile = fopen(host_path, "r");
+        while(fgets(buffer, sizeof(buffer), hfile) != NULL) {
+            write(buffer, fd);
+        }
+        close(name);
     }
 }
 

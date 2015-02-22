@@ -51,5 +51,6 @@ void read(int, int);
 void link(char*, char*);
 void unlink(char*);
 void cat(char*);
+void import(char*, char*);
 void export(char*, char*);
 void wlog(char*, ...);
