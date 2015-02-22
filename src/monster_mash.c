@@ -121,6 +121,9 @@ void parse_input(char *input, int input_length) {
     else if(strcmp(command, "cp") == 0) {
         cp(strtok(NULL, " \n"), strtok(NULL, " \n"));
     }
+    else if(strcmp(command, "tree") == 0) {
+        tree();
+    }
     else if(strcmp(command, "exit") == 0) {
         printf("Bye!\n");
         exit(0);
@@ -526,3 +529,6 @@ void cp(char *dest, char *src) {
     verbose = 1;
 }
 
+void tree() {
+    print_tree(current_dir_inode, 0);
+}

@@ -766,3 +766,67 @@ void copy_data(int fd, int file_offset, int size, int dest_fd) {
     }
     commit_disk(disk);
 }
+
+void print_space(num) {
+    int i;
+    if (num == 0) {
+        return;
+    }
+    for (i = 0; i < num - 4; i++) {
+        printf(" ");
+    }
+    for (i = 0; i < 4; i++) 
+    {
+        printf("%c", '-');
+    }
+}
+
+//Iterate through the current directory's data table and list valid files/dirs
+void print_tree(int current_dir_inode, int depth) { 
+    FILE *disk = access_disk(0);
+    //Go directly to the first block pointer for the current inode
+    fseek(disk, current_dir_inode + 3, SEEK_SET);
+    int data_block_offset = -1;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    
+    int i;
+    char *name = malloc(33);
+    for (i = 0; i < 4058; i += DIR_TABLE_ENTRY_SIZE) {
+        //Go to current entry in inode table
+        fseek(disk, data_block_offset + METADATA_SIZE + i, SEEK_SET);
+        
+        int temp_inode_id = -1;
+        fread(&temp_inode_id, sizeof(int), 1, disk);
+        fread(name, sizeof(char), MAX_FILENAME_LENGTH, disk);
+        if (temp_inode_id == -1) {
+            continue;
+        }
+        if(strlen(name) != 0) {
+            //Get the type of this element from its inode
+            int temp_inode_offset = find_inode_offset(temp_inode_id);
+            fseek(disk,temp_inode_offset, SEEK_SET);
+            char type = 0;
+            fread(&type, sizeof(char), 1, disk);
+            if (type == 'd') {
+                print_space(depth);
+                printf(BOLDBLUE "%s\n" RESET, name);
+                if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
+                    print_tree(temp_inode_offset, depth + 4);
+                }
+            }
+            else if (type == 'f') {
+                print_space(depth);
+                printf(RESET "%s\n" RESET, name);
+            }
+            else if (type == 'l'){
+                print_space(depth);
+                printf(CYAN "%s\n" RESET, name); 
+            }
+            else {
+                fprintf(stderr, "Unknown element type %c\n", type);
+            }
+        }
+    }
+    printf("\n");
+    commit_disk(disk);
+}
