@@ -1,4 +1,24 @@
-mkdir something
-mkdir hello
-ls
+open file1 w
+mkdir d1
+mkdir d2
+mkdir d3
+cd d1
+open ffile1 w
+open ffile2 w
+mkdir dd1
+cd dd1 
+mkdir ddd1
+cd ddd1
+open file w
+cd ../../..
+mkdir dd2
+open file8 w
+cd d3
+mkdir nested1
+cd nested1
+mkdir nested2
+cd nested2
+open filesomething w 
+cd ../../..
+tree
 exit

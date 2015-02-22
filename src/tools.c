@@ -215,7 +215,20 @@ void write_dir_data(char *name, int *current_dir_inode, short inode_id) {
         }
     }
     if (i >= 4058) {
-        //Go to next block
+        //If no next block:
+            //Create next block
+        //Call this function on next block
+        fseek(disk, block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
+        int next_block;
+        fread(&next_block, sizeof(int), 1, disk);
+        wlog("Next block id: %d\n", next_block);
+        if (next_block == -1) {
+            next_block = block_create("CONTINUED");
+            fseek(disk, block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
+            fwrite(&next_block, sizeof(int), 1, disk);
+        }
+        write_dir_data(name, &next_block, inode_id);
+        
     }
     else {
         //Go back and write the id
@@ -724,3 +737,117 @@ char *get_filename(char *path) {
 }
 
 
+void copy_data(int fd, int file_offset, int size, int dest_fd) {
+    int inode_offset = find_inode_offset(fd);
+    FILE *disk = access_disk(0);
+    fseek(disk, inode_offset + 3, SEEK_SET);
+    int data_block_offset = 0;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    
+    //Figure out how many blocks to skip and what file_offset will be in the destination
+    int i;
+    int dest_file_offset = file_offset % (BLOCK_SIZE - METADATA_SIZE);
+    int n_skip_blocks = file_offset / (BLOCK_SIZE - METADATA_SIZE);
+
+    for (i = 0; i < n_skip_blocks; i++) {
+        fseek(disk, data_block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
+        int potential_next_block_offset;
+        fread(&potential_next_block_offset, sizeof(int), 1, disk);
+        if (potential_next_block_offset != -1) {
+            data_block_offset = potential_next_block_offset;
+        }
+    } 
+    fseek(disk, data_block_offset + METADATA_SIZE + dest_file_offset, SEEK_SET);
+
+    int this_block_text = BLOCK_SIZE - METADATA_SIZE - dest_file_offset;
+    char *text = malloc(this_block_text + 1);
+    fread(text, sizeof(char), this_block_text, disk);
+    text[this_block_text] = '\0';
+    write(text, dest_fd);
+    free(text);
+
+    if (size > this_block_text) {
+        int leftover = size - this_block_text;
+        //Get next block's offset and read from it
+        fseek(disk, data_block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
+        fread(&data_block_offset, sizeof(int), 1, disk);
+        if (data_block_offset != -1) {
+            commit_disk(disk);   
+            read_data(fd, file_offset + this_block_text, leftover);
+            return;
+        }
+    }
+    commit_disk(disk);
+}
+
+void print_space(int num, int corner) {
+    int i;
+    if (num == 0) {
+        return;
+    }
+    for (i = 0; i < num - 2; i++) {
+        printf(" ");
+    }
+    for (i = 0; i < 2; i++) 
+    {
+        if (corner && !i)
+            printf("\xe2\x94\x9c");
+        else if(!i)
+            printf("\xe2\x94\x9c");
+        char *line = "\xe2\x94\x80";
+        printf("%s", line);
+    }
+}
+
+//Iterate through the current directory's data table and list valid files/dirs
+void print_tree(int current_dir_inode, int depth) { 
+    FILE *disk = access_disk(0);
+    //Go directly to the first block pointer for the current inode
+    fseek(disk, current_dir_inode + 3, SEEK_SET);
+    int data_block_offset = -1;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    
+    int i;
+    char *name = malloc(33);
+    int file_counter = 1;
+    for (i = 0; i < 4058; i += DIR_TABLE_ENTRY_SIZE) {
+        //Go to current entry in inode table
+        fseek(disk, data_block_offset + METADATA_SIZE + i, SEEK_SET);
+        
+        int temp_inode_id = -1;
+        fread(&temp_inode_id, sizeof(int), 1, disk);
+        fread(name, sizeof(char), MAX_FILENAME_LENGTH, disk);
+        if (temp_inode_id == -1) {
+            continue;
+        }
+        if(strlen(name) != 0) {
+            //Get the type of this element from its inode
+            int temp_inode_offset = find_inode_offset(temp_inode_id);
+            fseek(disk,temp_inode_offset, SEEK_SET);
+            char type = 0;
+            fread(&type, sizeof(char), 1, disk);
+            if (type == 'd') {
+                if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
+                    print_space(depth, file_counter);
+                    printf(BOLDBLUE "%s\n" RESET, name);
+                    print_tree(temp_inode_offset, depth + 2);
+                    file_counter=0;
+                }
+            }
+            else if (type == 'f') {
+                print_space(depth, file_counter);
+                printf(RESET "%s\n" RESET, name);
+                file_counter=0;
+            }
+            else if (type == 'l'){
+                print_space(depth, file_counter);
+                printf(CYAN "%s\n" RESET, name); 
+                file_counter=0;
+            }
+            else {
+                fprintf(stderr, "Unknown element type %c\n", type);
+            }
+        }
+    }
+    commit_disk(disk);
+}

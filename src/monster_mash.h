@@ -54,3 +54,6 @@ void cat(char*);
 void import(char*, char*);
 void export(char*, char*);
 void wlog(char*, ...);
+void cp(char*, char*);
+void tree();
+

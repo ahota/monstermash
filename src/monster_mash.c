@@ -118,6 +118,12 @@ void parse_input(char *input, int input_length) {
     else if(strcmp(command, "export") == 0) {
         export(strtok(NULL, " \n"), strtok(NULL, " \n"));
     }
+    else if(strcmp(command, "cp") == 0) {
+        cp(strtok(NULL, " \n"), strtok(NULL, " \n"));
+    }
+    else if(strcmp(command, "tree") == 0) {
+        tree();
+    }
     else if(strcmp(command, "exit") == 0) {
         printf("Bye!\n");
         exit(0);
@@ -500,3 +506,29 @@ void wlog(char *format, ...) {
     }
 }
 
+void cp(char *dest, char *src) {
+    verbose = 0;
+    int current_dir = current_dir_inode;
+    int src_fd = find_inode_id(expand_path(src, &current_dir_inode));
+    char *dest_parent = get_parent_path(dest);
+    char *dest_name = get_filename(dest);
+    cd(dest_parent);
+
+    //Open a file as destination
+    int len = strlen(dest_name);
+    char *file_flag = malloc(strlen(dest_name) + 3);
+    strcpy(file_flag, dest_name);
+    file_flag[len] = ' ';
+    file_flag[len + 1] = 'w';
+    file_flag[len + 2] = '\n';
+    int dest_fd = open(file_flag);
+    printf("%d-%d\n", src_fd, dest_fd);
+    copy_data(src_fd, 0, DISK_SIZE, dest_fd);
+    close(dest_name);
+    current_dir_inode = current_dir;
+    verbose = 1;
+}
+
+void tree() {
+    print_tree(current_dir_inode, 0);
+}
