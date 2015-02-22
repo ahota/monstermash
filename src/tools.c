@@ -194,6 +194,28 @@ int disk_create(short *inode_counter) {
     return directory_create("/", inode_counter, NULL);
 }
 
+int insert_entry(int block_offset, char *name, short inode_id) {
+    FILE *disk = access_disk(0);
+    int i;
+    //Go through every entry in this block's inode table
+    for(i = 0; i < BLOCK_SIZE - METADATA_SIZE; i+= DIR_TABLE_ENTRY_SIZE) {
+        int temp_id = 0;
+        fseek(disk, block_offset + METADATA_SIZE + i, SEEK_SET);
+        fread(&temp_id, sizeof(int), 1, disk);
+        char risk;
+        fread(&risk, sizeof(char), 1, disk);
+        //Space exists and it's not . or ..
+        if(temp_id == 0 && risk != '.') {
+            fseek(disk, block_offset + METADATA_SIZE + i, SEEK_SET);
+            fwrite(&inode_id, sizeof(int), 1, disk);
+            fwrite(name, sizeof(char), strlen(name), disk);
+            commit_disk(disk);
+            return 0;
+        }
+    }
+    //Couldn't find space in this block
+    return -1;
+}
 
 //Write directory contents to a directory's data block
 void write_dir_data(char *name, int *current_dir_inode, short inode_id) {
@@ -203,6 +225,14 @@ void write_dir_data(char *name, int *current_dir_inode, short inode_id) {
     int block_offset = 0;
     fread(&block_offset, sizeof(int), 1, disk);
 
+    while(insert_entry(block_offset, name, inode_id) != 0) {
+        fseek(disk, block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
+        fread(&block_offset, sizeof(int), 1, disk);
+        if(block_offset == -1) {
+            block_offset = block_create("CONTINUED");
+        }
+    }
+    /*
     int i;
     for (i = 0; i < 4058; i += DIR_TABLE_ENTRY_SIZE) {
         int temp_id = 0;
@@ -238,6 +268,7 @@ void write_dir_data(char *name, int *current_dir_inode, short inode_id) {
         printf("%d\n", inode_id);
         fwrite(name, sizeof(char), strlen(name), disk);
     }
+    */
     commit_disk(disk);
 }
 
