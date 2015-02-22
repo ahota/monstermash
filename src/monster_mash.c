@@ -7,6 +7,7 @@ int n_open_files = 0;
 char *prompt = "monster@test:";
 char *path;
 int *open_files;
+int verbose = 1;
 
 //Just for fun
 char prompt_colors[][10] = {BOLDRED, BOLDGREEN, BOLDYELLOW, BOLDBLUE,
@@ -111,6 +112,9 @@ void parse_input(char *input, int input_length) {
     else if(strcmp(command, "cat") == 0) {
         cat(strtok(NULL, "\n"));
     }
+    else if(strcmp(command, "export") == 0) {
+        export(strtok(NULL, " \n"), strtok(NULL, " \n"));
+    }
     else if(strcmp(command, "exit") == 0) {
         printf("Bye!\n");
         exit(0);
@@ -200,13 +204,13 @@ void rmdir(char *name) {
 int open(char *file_flag) {
     //Input has filename (potentially with spaces) and flag
     
-    printf("file_flag: %s\n", file_flag);
+    wlog("file_flag: %s\n", file_flag);
 
     char *name, *flag;
     smart_split(file_flag, &name, &flag);
-    printf("open()\n");
-    printf("name       = %s\n", name);
-    printf("flag       = %s\n", flag);
+    wlog("open()\n");
+    wlog("name       = %s\n", name);
+    wlog("flag       = %s\n", flag);
     if(name == NULL || strlen(name) == 0) {
         fprintf(stderr, BOLDRED "Invalid file name\n" RESET);
         return -1;
@@ -304,7 +308,6 @@ int open(char *file_flag) {
     }
     //Check if it's already open
     int i;
-    printf("fd = %d\n", fd);
     for(i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
         if (open_files[i] == fd) {
             fprintf(stderr, BOLDRED "File is already open with file "
@@ -321,7 +324,7 @@ int open(char *file_flag) {
             break;
         }
     }
-    printf("Opened file `%s` with file descriptor %d\n", name, fd);
+    wlog("Opened file `%s` with file descriptor %d\n", name, fd);
     return fd;
 }
 
@@ -353,14 +356,14 @@ void close(char *name) {
         return;
     }
     int i;
-    printf("fd = %d\n", fd);
+    wlog("fd = %d\n", fd);
     for(i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
         if (open_files[i] == fd) {
             open_files[i] = 0;
             open_files[i+1] = 0;
             open_files[i+2] = 0;
             n_open_files--;
-            printf("Closed file %s (fd = %d)\n", trimmed, fd);
+            wlog("Closed file %s (fd = %d)\n", trimmed, fd);
             return;
         }
     }
@@ -454,6 +457,25 @@ void cat(char *name) {
     if (fd != -1) {
         read(DISK_SIZE, fd);
         close(name);    
+    }
+}
+
+void export(char *host_path, char *name) {
+    FILE *temp_stdout = stdout;
+    verbose = 0;
+    stdout = fopen(host_path, "w+");
+    cat(name);
+    fclose(stdout);
+    verbose = 1;
+    stdout = temp_stdout;
+}
+
+void wlog(char *format, ...) {
+    if (verbose) {
+        va_list args;
+        va_start(args, format);
+        vprintf(format, args);
+        va_end(args);
     }
 }
 

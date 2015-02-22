@@ -4,6 +4,7 @@
 #include<assert.h>
 #include<sys/stat.h>
 #include<time.h>
+#include<stdarg.h>
 
 #define INPUT_BUFFER_SIZE 128 //Initial size, dynamic reallocation is used
 #define BLOCKS_PER_INODE 10
@@ -50,3 +51,5 @@ void read(int, int);
 void link(char*, char*);
 void unlink(char*);
 void cat(char*);
+void export(char*, char*);
+void wlog(char*, ...);

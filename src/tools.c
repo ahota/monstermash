@@ -64,12 +64,12 @@ void smart_split(char *args, char **arg1, char **arg2) {
             return;
         }
     }
-    printf("start      = %d\n", start);
-    printf("arg1_end   = %d\n", arg1_end);
-    printf("arg2_start = %d\n", arg2_start);
-    printf("end        = %d\n", end);
-    printf("arg1       = %s\n", *arg1);
-    printf("arg2       = %s\n", *arg2);
+    wlog("start      = %d\n", start);
+    wlog("arg1_end   = %d\n", arg1_end);
+    wlog("arg2_start = %d\n", arg2_start);
+    wlog("end        = %d\n", end);
+    wlog("arg1       = %s\n", *arg1);
+    wlog("arg2       = %s\n", *arg2);
 }
 
 void trim_whitespace(char *name, int *start, int *end) {
