@@ -194,7 +194,8 @@ int disk_create(short *inode_counter) {
     return directory_create("/", inode_counter, NULL);
 }
 
-//Supposed to find an empty place in the given data block and write the name and inode_id
+//Find the first free space in a block's inode table
+//Insert the given name and id
 int insert_entry(int block_offset, char *name, short inode_id) {
     FILE *disk = access_disk(0);
     int i;
@@ -207,7 +208,7 @@ int insert_entry(int block_offset, char *name, short inode_id) {
         fread(&risk, sizeof(char), 1, disk);
         //Space exists and it's not . or ..
         if(temp_id == 0 && risk != '.') {
-            fseek(disk, block_offset + METADATA_SIZE + i, SEEK_SET);//Seek back
+            fseek(disk, block_offset + METADATA_SIZE + i, SEEK_SET);
             fwrite(&inode_id, sizeof(short), 1, disk);
             fseek(disk, sizeof(short), SEEK_CUR);
             fwrite(name, sizeof(char), strlen(name), disk);
@@ -354,13 +355,16 @@ void ls_dir(int current_dir_inode) {
                 char type = 0;
                 fread(&type, sizeof(char), 1, disk);
                 if (type == 'd') {
-                    printf(BOLDBLUE "%-*s" RESET, MAX_FILENAME_LENGTH + 1, name);
+                    printf(BOLDBLUE "%-*s" RESET,
+                            MAX_FILENAME_LENGTH + 1, name);
                 }
                 else if (type == 'f') {
-                    printf(RESET "%-*s" RESET, MAX_FILENAME_LENGTH + 1, name);
+                    printf(RESET "%-*s" RESET,
+                            MAX_FILENAME_LENGTH + 1, name);
                 }
                 else if (type == 'l'){
-                    printf(CYAN "%-*s" RESET, MAX_FILENAME_LENGTH + 1, name); 
+                    printf(CYAN "%-*s" RESET,
+                            MAX_FILENAME_LENGTH + 1, name); 
                 }
                 else {
                     fprintf(stderr, "Unknown element type %c\n", type);
@@ -435,14 +439,13 @@ int directory_remove(char *name, int *current_dir_inode) {
     int rmdir_inode_offset = 0, rmdir_block_offset = 0;
     int next_block_offset;
     //Find the directory/file in the current directory's inode table
-    wlog(YELLOW "DEBUG: Searching for directory in parent\n" RESET);
     do {
         fseek(disk, data_block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
         fread(&next_block_offset, sizeof(int), 1, disk);
         inode_id = find_entry(data_block_offset, name);
         if(inode_id != -1) {
             rmdir_inode_offset = find_inode_offset(inode_id);
-            wlog(YELLOW "DEBUG: Found inode_id=%d at rmdir_inode_offset=%d\n" RESET, inode_id, rmdir_inode_offset);
+                    RESET, inode_id, rmdir_inode_offset);
             break;
         }
     } while((data_block_offset = next_block_offset) != -1);
@@ -457,8 +460,6 @@ int directory_remove(char *name, int *current_dir_inode) {
     fseek(disk, rmdir_inode_offset + 3, SEEK_SET);
     fread(&rmdir_block_offset, sizeof(int), 1, disk);
     data_block_offset = rmdir_block_offset;
-    wlog(YELLOW "DEBUG: Directory data_block_offset=%d\n" RESET, data_block_offset);
-    wlog(YELLOW "DEBUG: Checking if directory is empty\n" RESET);
     //See if the directory is empty
     do {
         fseek(disk, data_block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
@@ -466,14 +467,14 @@ int directory_remove(char *name, int *current_dir_inode) {
         short temp_id = find_entry(data_block_offset, NULL);
         //Something was in this table
         if(temp_id != -1) {
-            fprintf(stderr, BOLDRED "Cannot delete non-empty directory\n" RESET);
+            fprintf(stderr, BOLDRED "Cannot delete non-empty directory\n"
+                    RESET);
             return -1;
         }
     } while((data_block_offset = next_block_offset) != -1);
 
     //directory is empty, delete its blocks
     data_block_offset = rmdir_block_offset;
-    wlog(YELLOW "DEBUG: Wiping directory blocks\n" RESET);
     do {
         fseek(disk, data_block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
         fread(&next_block_offset, sizeof(int), 1, disk);
@@ -481,16 +482,13 @@ int directory_remove(char *name, int *current_dir_inode) {
     } while((data_block_offset = next_block_offset) != -1);
 
     //delete its inode
-    wlog(YELLOW "DEBUG: Wiping directory inode\n" RESET);
     wipe(disk, rmdir_inode_offset, INODE_SIZE);
 
     //delete it from the parent
-    wlog(YELLOW "DEBUG: Wiping directory from parent\n" RESET);
     data_block_offset = parent_block_offset;
     do {
         fseek(disk, data_block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
         fread(&next_block_offset, sizeof(int), 1, disk);
-        wlog(YELLOW "DEBUG: dbo=%d\tnbo=%d\n" RESET, data_block_offset, next_block_offset);
         if(remove_entry(data_block_offset, name) != -1) {
             commit_disk(disk);
             return 0;
@@ -498,55 +496,10 @@ int directory_remove(char *name, int *current_dir_inode) {
     } while((data_block_offset = next_block_offset) != -1);
 
     //Who knows what happened
-    fprintf(stderr, BOLDRED "Unknown error occurred when deleting directory\n" RESET);
+    fprintf(stderr, BOLDRED "Unknown error occurred when deleting directory\n"
+            RESET);
     commit_disk(disk);
     return -1;
-
-    /*
-    for (i = 0; i < 4058; i += DIR_TABLE_ENTRY_SIZE) {
-        fseek(disk, data_block_offset + METADATA_SIZE + i, SEEK_SET);
-        fread(&inode_id, sizeof(int), 1, disk);
-        printf("%d\n", inode_id);
-        fread(check_name, sizeof(char), MAX_FILENAME_LENGTH, disk);
-        if (strcmp(name, check_name) == 0) {
-            rmdir_offset = data_block_offset + i + METADATA_SIZE;
-            break;
-        }
-    }
-    if (i >= 4058) {
-        fprintf(stderr, "Directory does not exist\n");
-        //destroy_file_system();
-        return -1;
-    }
-    //Go to the directory and check to see if it's empty
-    int inode_offset = find_inode_offset(inode_id);
-    fseek(disk, inode_offset + 3, SEEK_SET);
-    
-    fread(&data_block_offset, sizeof(int), 1, disk);
-    int n_files = 0;
-    for (i = 0; i < 4058; i += DIR_TABLE_ENTRY_SIZE) {
-        fseek(disk, data_block_offset + METADATA_SIZE + i, SEEK_SET);
-        int temp_id = 0;
-        char *temp_name = malloc(MAX_FILENAME_LENGTH);
-        fread(&temp_id, sizeof(int), 1, disk);
-        fread(temp_name, sizeof(char), MAX_FILENAME_LENGTH, disk);
-        if (temp_id != 0 && strcmp(temp_name, ".") != 0 && strcmp(temp_name, "..") != 0) {
-            n_files++;
-        }
-    }
-    if (n_files > 0) {
-        fprintf(stderr, "Cannot delete non-empty directory\n");
-        commit_disk(disk);
-        return -1;
-    }
-    wipe(disk, data_block_offset, BLOCK_SIZE); //Wiping data block
-    wipe(disk, inode_offset, INODE_SIZE); //Wiping inode
-
-    //Remove it from the parent
-    wipe(disk, rmdir_offset, METADATA_SIZE);
-    commit_disk(disk);
-    return 0;
-    */
 }
 
 int file_exists(char *name, int *current_dir_inode, int shallow) {
@@ -577,7 +530,8 @@ int file_exists(char *name, int *current_dir_inode, int shallow) {
                     fseek(disk, sizeof(short), SEEK_CUR);
                     fread(&data_block_offset, sizeof(int), 1, disk);
                     fseek(disk, data_block_offset + METADATA_SIZE, SEEK_SET);
-                    printf("looking at %d\n", data_block_offset + METADATA_SIZE);
+                    printf("looking at %d\n", data_block_offset +
+                            METADATA_SIZE);
                     fread(&ret_id, sizeof(int), 1, disk);
                 }
                 commit_disk(disk);
@@ -596,15 +550,18 @@ int file_create(char *name, short *inode_counter, int *current_dir_inode) {
 }
 
 //Create a link `name` pointing to target `src`
-void link_create(char *name, char *src, short *inode_counter, int *current_dir_inode) {
-    //If the user enters paths, find the target, the link's directory, and the link's name
+void link_create(char *name, char *src,
+                 short *inode_counter, int *current_dir_inode) {
+    //If the user enters paths:
+    //find the target, the link's directory, and the link's name
     int src_inode_offset = expand_path(src, current_dir_inode, 0);
     char *link_parent, *link_name;
     get_parent_path(name, &link_parent);
     get_filename(name, &link_name);
 
     //The inode the link will be under
-    int link_parent_inode_offset = expand_path(link_parent, current_dir_inode, 1);
+    int link_parent_inode_offset = expand_path(link_parent,
+            current_dir_inode, 1);
 
     //The link's inode
     short inode_id = inode_create(link_name, 'l', inode_counter);
@@ -664,10 +621,12 @@ void link_remove(char *name, short *inode_counter, int *current_dir_inode) {
         //Remove the link inode   
         //Go to the data block and find the target inode
         //Delete the data block
-        //Decrement using target inode and delete that inode and its data if necessary
+        //Decrement using target inode
+        //Delete that inode and its data if necessary
         wipe(disk, link_inode_offset, INODE_SIZE);
         fseek(disk, data_block_offset + METADATA_SIZE, SEEK_SET);
-        printf("Position of data in link: %d\n", data_block_offset + METADATA_SIZE);
+        printf("Position of data in link: %d\n",
+                data_block_offset + METADATA_SIZE);
         int target_inode_id;
         fread(&target_inode_id, sizeof(int), 1, disk);
         
@@ -712,7 +671,8 @@ void remove_file_from_dir(FILE *disk, int parent_offset, int inode_id) {
         fread(&temp_id, sizeof(int), 1, disk);
         wlog("temp_id: %d\tinode_id: %d\n", temp_id, inode_id);
         if (temp_id == inode_id) {
-            wipe(disk, parent_data_block_offset + METADATA_SIZE + i, DIR_TABLE_ENTRY_SIZE);//phew
+            wipe(disk, parent_data_block_offset + METADATA_SIZE + i,
+                    DIR_TABLE_ENTRY_SIZE);//phew
             return;
         }
     }
@@ -742,7 +702,8 @@ void write_data(int fd, int file_offset, char *text) {
     int data_block_offset = 0;
     fread(&data_block_offset, sizeof(int), 1, disk);
 
-    //Figure out how many blocks to skip and what file_offset will be in the destination
+    //Figure out how many blocks to skip
+    //and what file_offset will be in the destination
     int i;
     int dest_file_offset = file_offset % (BLOCK_SIZE - METADATA_SIZE);
     int n_skip_blocks = file_offset / (BLOCK_SIZE - METADATA_SIZE);
@@ -751,7 +712,8 @@ void write_data(int fd, int file_offset, char *text) {
         fseek(disk, data_block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
         fread(&data_block_offset, sizeof(int), 1, disk);
         if (data_block_offset == -1) {
-            fprintf(stderr, BOLDRED "ERROR: Cannot write past end of file\n" RESET);
+            fprintf(stderr, BOLDRED "ERROR: Cannot write past end of file\n"
+                    RESET);
             commit_disk(disk);
             return;
         } 
@@ -785,7 +747,8 @@ void read_data(int fd, int file_offset, int size) {
     int data_block_offset = 0;
     fread(&data_block_offset, sizeof(int), 1, disk);
     
-    //Figure out how many blocks to skip and what file_offset will be in the destination
+    //Figure out how many blocks to skip
+    //and what file_offset will be in the destination
     int i;
     int dest_file_offset = file_offset % (BLOCK_SIZE - METADATA_SIZE);
     int n_skip_blocks = file_offset / (BLOCK_SIZE - METADATA_SIZE);
@@ -895,7 +858,8 @@ void copy_data(int fd, int file_offset, int size, int dest_fd) {
     int data_block_offset = 0;
     fread(&data_block_offset, sizeof(int), 1, disk);
     
-    //Figure out how many blocks to skip and what file_offset will be in the destination
+    //Figure out how many blocks to skip
+    //and what file_offset will be in the destination
     int i;
     int dest_file_offset = file_offset % (BLOCK_SIZE - METADATA_SIZE);
     int n_skip_blocks = file_offset / (BLOCK_SIZE - METADATA_SIZE);

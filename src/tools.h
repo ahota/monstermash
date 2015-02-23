@@ -29,7 +29,7 @@ int    file_create(char *name, short *inode_counter, int *current_dir_inode);
 void   write_data(int fd, int file_offset, char *text);
 void   read_data(int fd, int file_offset, int size);
 void   link_create(char *name, char *src, 
-        short *inode_counter, int *current_inode);
+                   short *inode_counter, int *current_inode);
 void   get_parent_path(char *path, char **ret);
 void   get_filename(char *path, char **ret);
 void   increment_link(int target_inode_offset);
