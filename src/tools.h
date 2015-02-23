@@ -10,6 +10,7 @@ void   wipe(FILE* disk, int offset, int n_bytes);
 short  inode_create(char *name, char type, short *inode_counter);
 int    find_inode_offset(short inode_id);
 short  find_inode_id(int inode_offset);
+char   inode_type(short inode_id);
 
 //Block functions
 int    block_create(char *name);

@@ -519,5 +519,80 @@ void tree() {
 }
 
 void stat_mm(char *name) {
+    int start, end;
+    trim_whitespace(name, &start, &end);
+    
+    if(end <= start) {
+        fprintf(stderr, BOLDRED "Invalid file or directory name\n" RESET);
+        return;
+    }
+    char *trimmed;
+    if(name[start] == '"') {
+        if(name[end - 1] == '"') {
+            trimmed = malloc((end - 1) - (start + 1) + 1);
+            strncpy(trimmed, name + start + 1, (end - 1) - (start + 1));
+            trimmed[(end - 1) - (start + 1)] = '\0';
+        }
+        else {
+            fprintf(stderr, BOLDRED "Mismatched quotation\n" RESET);
+            return;
+        }
+    }
+    else {
+        trimmed = strtok(name, " \n");
+        if(strtok(NULL, " \n") != NULL)
+            fprintf(stderr, YELLOW "Ignoring arguments after space\n" RESET);
+    }
+
+    //Find file/directory's inode
+    //We want shallow = 1 so that if this is a link, we don't follow it
+    int inode_id = file_exists(trimmed, &current_dir_inode, 1);
+    if(inode_id == -1) {
+        fprintf(stderr, BOLDRED "File/directory does not exist\n" RESET);
+        return;
+    }
+
+    printf("Name:     %s\n", trimmed);
+    printf("Inode ID: %d\n", inode_id);
+
+    char type = inode_type((short)inode_id);
+    printf("Type:     ");
+    if(type == 'd')
+        printf("directory\n");
+    else if(type == 'f')
+        printf("file\n");
+    else if(type == 'l')
+        printf("link\n");
+    else
+        printf("unknown\n");
+
+    /* TODO
+     *
+     * Link count:
+     *   Easy
+     *
+     * Number of blocks:
+     *   Traverse blocks and keep count until next_block = -1
+     *
+     * Size of file/dir:
+     *   Go to last block
+     *   Start at last byte and move backward until byte != 0
+     *   Not guaranteed to be exact, but will be close
+     *   May be slow
+     */
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

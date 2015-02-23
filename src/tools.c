@@ -1002,3 +1002,18 @@ void print_tree(int current_dir_inode, int depth) {
     }
     commit_disk(disk);
 }
+
+char inode_type(short inode_id) {
+    if(inode_id < 0) {
+        fprintf(stderr, BOLDRED "Invalid inode ID\n" RESET);
+        return 0;
+    }
+    int inode_offset = find_inode_offset(inode_id);
+    FILE *disk = access_disk(0);
+    fseek(disk, inode_offset, SEEK_SET);
+    char type;
+    fread(&type, sizeof(char), 1, disk);
+    commit_disk(disk);
+    return type;
+}
+
