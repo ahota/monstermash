@@ -445,7 +445,6 @@ int directory_remove(char *name, int *current_dir_inode) {
         inode_id = find_entry(data_block_offset, name);
         if(inode_id != -1) {
             rmdir_inode_offset = find_inode_offset(inode_id);
-                    RESET, inode_id, rmdir_inode_offset);
             break;
         }
     } while((data_block_offset = next_block_offset) != -1);
