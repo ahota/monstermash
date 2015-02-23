@@ -14,6 +14,9 @@ char   inode_type(short inode_id);
 
 //Block functions
 int    block_create(char *name);
+void   get_name(short inode_id, char **name);
+int    block_count(short inode_id);
+int    total_size(short inode_id);
 
 //Directory functions
 int    directory_create(char *name, short *inode_counter, int *current_inode);
@@ -38,6 +41,7 @@ void   link_remove(char *name, short *inode_counter, int *current_dir_inode);
 void   copy_data(int fd, int file_offset, int size, int dest_fd);
 void   print_tree(int current_dir_inode, int depth);
 void   print_space(int num, int corner);
+short  get_link_count(short inode_id);
 
 //Utilities
 void   update_prompt(int current_dir_inode, char *path);

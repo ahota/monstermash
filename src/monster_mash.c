@@ -552,11 +552,15 @@ void stat_mm(char *name) {
         return;
     }
 
-    printf("Name:     %s\n", trimmed);
-    printf("Inode ID: %d\n", inode_id);
+    //If the user enters . , give them the actual name of the dir
+    char *block_name;
+    get_name((short)inode_id, &block_name);
+
+    printf("Name on disk     | %s\n", block_name);
+    printf("inode ID         | %d\n", inode_id);
 
     char type = inode_type((short)inode_id);
-    printf("Type:     ");
+    printf("Type             | ");
     if(type == 'd')
         printf("directory\n");
     else if(type == 'f')
@@ -566,20 +570,27 @@ void stat_mm(char *name) {
     else
         printf("unknown\n");
 
-    /* TODO
-     *
-     * Link count:
-     *   Easy
-     *
-     * Number of blocks:
-     *   Traverse blocks and keep count until next_block = -1
-     *
-     * Size of file/dir:
-     *   Go to last block
-     *   Start at last byte and move backward until byte != 0
-     *   Not guaranteed to be exact, but will be close
-     *   May be slow
-     */
+    printf("Number of links  | %d\n",   get_link_count((short)inode_id));
+    printf("Blocks allocated | %d\n",   block_count((short)inode_id));
+
+    //Get total size of this file/dir
+    float size = total_size((short)inode_id);
+    char magnitude = 0; //pop pop!
+    while(size > BLOCK_SIZE * 2) {
+        size /= 1024;
+        magnitude++;
+    }
+
+    //Smart print size
+    printf("Total size       | ");
+    if(magnitude == 0)
+        printf("%d B\n", (int)size);
+    else if(magnitude == 1)
+        printf("%.1f kB\n", size);
+    else if(magnitude == 2)
+        printf("%.1f MB\n", size);
+    else
+        printf("%.1f ?B\n", size);
 
 }
 

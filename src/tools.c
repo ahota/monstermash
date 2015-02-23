@@ -966,6 +966,23 @@ void print_tree(int current_dir_inode, int depth) {
     commit_disk(disk);
 }
 
+void get_name(short inode_id, char **name) {
+    if(inode_id < 0) {
+        fprintf(stderr, BOLDRED "Invalid inode ID\n" RESET);
+        return;
+    }
+    int inode_offset = find_inode_offset(inode_id);
+    FILE *disk = access_disk(0);
+    fseek(disk, inode_offset + 3, SEEK_SET);
+    int data_block_offset;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    fseek(disk, data_block_offset, SEEK_SET);
+    *name = malloc(MAX_FILENAME_LENGTH + 1);
+    fread(*name, sizeof(char), MAX_FILENAME_LENGTH, disk);
+    (*name)[MAX_FILENAME_LENGTH] = '\0';
+    commit_disk(disk);
+}
+
 char inode_type(short inode_id) {
     if(inode_id < 0) {
         fprintf(stderr, BOLDRED "Invalid inode ID\n" RESET);
@@ -980,3 +997,72 @@ char inode_type(short inode_id) {
     return type;
 }
 
+short get_link_count(short inode_id) {
+    if(inode_id < 0) {
+        fprintf(stderr, BOLDRED "Invalid inode ID\n" RESET);
+        return 0;
+    }
+    int inode_offset = find_inode_offset(inode_id);
+    FILE *disk = access_disk(0);
+    fseek(disk, inode_offset + 3, SEEK_SET);
+    int data_block_offset;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    fseek(disk, data_block_offset + MAX_FILENAME_LENGTH + sizeof(int),
+            SEEK_SET);
+    short link_count;
+    fread(&link_count, sizeof(short), 1, disk);
+    commit_disk(disk);
+    return link_count;
+}
+
+int block_count(short inode_id) {
+    if(inode_id < 0) {
+        fprintf(stderr, BOLDRED "Invalid inode ID\n" RESET);
+        return 0;
+    }
+    int inode_offset = find_inode_offset(inode_id);
+    FILE *disk = access_disk(0);
+    fseek(disk, inode_offset + 3, SEEK_SET);
+    int data_block_offset, next_block_offset, count = 0;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    do {
+        fseek(disk, data_block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
+        fread(&next_block_offset, sizeof(int), 1, disk);
+        count++;
+    } while((data_block_offset = next_block_offset) != -1);
+
+    commit_disk(disk);
+    return count;
+}
+
+int total_size(short inode_id) {
+    if(inode_id < 0) {
+        fprintf(stderr, BOLDRED "Invalid inode ID\n" RESET);
+        return 0;
+    }
+    int inode_offset = find_inode_offset(inode_id);
+    FILE *disk = access_disk(0);
+    fseek(disk, inode_offset + 3, SEEK_SET);
+    int data_block_offset, next_block_offset, last_block_offset, count = 0;
+    fread(&data_block_offset, sizeof(int), 1, disk);
+    do {
+        fseek(disk, data_block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
+        fread(&next_block_offset, sizeof(int), 1, disk);
+        count++;
+        last_block_offset = data_block_offset;
+    } while((data_block_offset = next_block_offset) != -1);
+
+    //Start from last byte of last block
+    //Search backward until we find a non-zero byte
+    int i;
+    char cur_byte;
+    for(i = BLOCK_SIZE - 1; i > METADATA_SIZE; i--) {
+        fseek(disk, last_block_offset + i, SEEK_SET);
+        fread(&cur_byte, sizeof(char), 1, disk);
+        if(cur_byte != 0)
+            break;
+    }
+
+    commit_disk(disk);
+    return (count - 1) * (BLOCK_SIZE - METADATA_SIZE) + (i - METADATA_SIZE);
+}

@@ -210,4 +210,5 @@ cd ..
 tree
 rmdir 199
 ls
+stat .
 exit
