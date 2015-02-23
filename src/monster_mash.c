@@ -82,7 +82,7 @@ void parse_input(char *input, int input_length) {
         ls();
     }
     else if(strcmp(command, "cd") == 0) {
-        cd(strtok(NULL, " \n"));
+        cd(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "rmdir") == 0) {
         rmdir(strtok(NULL, " \n"));
@@ -170,7 +170,11 @@ void make_dir(char *name) {
             }
             trimmed = malloc((end - 1) - (start + 1) + 1);
             strncpy(trimmed, name + start + 1, (end - 1) - (start + 1));
-            trimmed[(end - 1) - (start + 1)];
+
+            //This line used to be
+            //trimmed[(end - 1) - (start + 1)];
+            //"Here is a character"
+            trimmed[(end - 1) - (start + 1)] = '\0';
         }
         else {
             fprintf(stderr, BOLDRED "Mismatched quotation\n" RESET);
@@ -184,7 +188,7 @@ void make_dir(char *name) {
     }
 
     //Check if this directory already exists
-    if(file_exists(name, &current_dir_inode, 1) != -1) {
+    if(file_exists(trimmed, &current_dir_inode, 1) != -1) {
         fprintf(stderr, BOLDRED "Directory named `%s` already exists\n"
                 RESET, name);
         return;
@@ -201,6 +205,12 @@ void cd(char *name) {
     if(name == NULL || strlen(name) == 0) {
         fprintf(stderr, BOLDRED "Invalid argument\n" RESET);
         return;
+    }
+    if(name[0] == '"') {
+        if(name[strlen(name) - 1] != '"') {
+            fprintf(stderr, BOLDRED "Mismatched quotation\n" RESET);
+            return;
+        }
     }
     current_dir_inode = ch_dir(name, &current_dir_inode);
     update_prompt(current_dir_inode, path);

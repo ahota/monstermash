@@ -1,3 +1,6 @@
+open file w
+write 1 Hello World!
+close file
 mkdir 1
 mkdir 2
 mkdir 3
@@ -198,5 +201,13 @@ mkdir 197
 mkdir 198
 mkdir 199
 mkdir 200
+ls
+link file 200/l
+cd 200
+cat l
+ls
+cd ..
+tree
+rmdir 199
 ls
 exit

@@ -30,3 +30,7 @@ void copy_data(int, int, int, int);
 void print_tree(int, int);
 void print_space(int, int);
 int expand_path(char *path, int *current_dir_inode, int shallow); 
+int insert_entry(int block_offset, char *name, short inode_id);
+short find_entry(int block_offset, char *name);
+int remove_entry(int block_offset, char *name);
+void wipe(FILE* disk, int offset, int n_bytes);
