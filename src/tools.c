@@ -599,8 +599,9 @@ int file_create(char *name, short *inode_counter, int *current_dir_inode) {
 void link_create(char *name, char *src, short *inode_counter, int *current_dir_inode) {
     //If the user enters paths, find the target, the link's directory, and the link's name
     int src_inode_offset = expand_path(src, current_dir_inode, 0);
-    char *link_parent = get_parent_path(name);
-    char *link_name = get_filename(name);
+    char *link_parent, *link_name;
+    get_parent_path(name, &link_parent);
+    get_filename(name, &link_name);
 
     //The inode the link will be under
     int link_parent_inode_offset = expand_path(link_parent, current_dir_inode, 1);
@@ -857,31 +858,33 @@ int expand_path(char *path, int *current_dir_inode, int shallow) {
     return temp_dir_inode;
 }
 
-char *get_parent_path(char *path) {
+void get_parent_path(char *path, char **ret) {
     char *last_slash = strrchr(path,'/');
     if(last_slash == NULL) {
         free(last_slash);
-        char *parent = ".";
-        return parent;
+        *ret = malloc(2);
+        (*ret)[0] = '.';
+        (*ret)[1] = '\0';
+        return;
     }
     printf("path: %p\nlast_slash: %p\n", path, last_slash);
-    char *ret = malloc(last_slash - path + 2);
-    strncpy(ret, path, last_slash - path);
-    ret[last_slash - path] = '\0';
-    return ret;
+    *ret = malloc(last_slash - path + 2);
+    strncpy(*ret, path, last_slash - path);
+    (*ret)[last_slash - path] = '\0';
 }
 
-char *get_filename(char *path) {
+void get_filename(char *path, char **ret) {
     char *last_slash = strrchr(path, '/');
     if(last_slash == NULL) {
         free(last_slash);
-        return path;
+        *ret = strdup(path);
+        return;
     }
     last_slash++;
     int length = strlen(path);
-    char *ret = malloc((path + length) - last_slash + 2);
-    strncpy(ret, last_slash, (path + length) - last_slash + 1);
-    return ret;
+    *ret = malloc((path + length) - last_slash + 2);
+    strncpy(*ret, last_slash, (path + length) - last_slash + 1);
+    (*ret)[(path + length) - last_slash + 1] = '\0';
 }
 
 

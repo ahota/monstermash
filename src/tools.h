@@ -1,36 +1,48 @@
 #include "monster_mash.h"
 
-FILE *access_disk(int);
-int commit_disk(FILE*);
-short inode_create(char*, char type,short*);
-int block_create(char *);
-int disk_create(short*);
-int directory_create(char*, short*, int*);
-void write_dir_data(char *name, int *current_dir_inode, short);
-void update_prompt(int, char*);
-void ls_dir(int);
-int ch_dir(char*, int*);
-int find_inode_offset(short);
-short find_inode_id(int);
-int directory_remove(char*, int*);
-int file_exists(char*, int*, int);
-int file_create(char*, short*, int*);
-void write_data(int, int, char*);
-void read_data(int, int, int);
-void link_create(char*, char*, short*, int*);
-char *get_parent_path(char *);
-char *get_filename(char *);
-void increment_link(int);
-int decrement_link(int);
-void link_remove(char *name, short *inode_counter, int *current_dir_inode); 
-void remove_file_from_dir(FILE *disk, int parent_offset, int inode_id);
-void trim_whitespace(char *name, int *start, int *end);
-void smart_split(char *args, char **arg1, char **arg2);
-void copy_data(int, int, int, int);
-void print_tree(int, int);
-void print_space(int, int);
-int expand_path(char *path, int *current_dir_inode, int shallow); 
-int insert_entry(int block_offset, char *name, short inode_id);
-short find_entry(int block_offset, char *name);
-int remove_entry(int block_offset, char *name);
-void wipe(FILE* disk, int offset, int n_bytes);
+// Disk functions
+FILE * access_disk(int access_type);
+int    commit_disk(FILE *disk);
+int    disk_create(short *inode_counter);
+void   wipe(FILE* disk, int offset, int n_bytes);
+
+//Inode functions
+short  inode_create(char *name, char type, short *inode_counter);
+int    find_inode_offset(short inode_id);
+short  find_inode_id(int inode_offset);
+
+//Block functions
+int    block_create(char *name);
+
+//Directory functions
+int    directory_create(char *name, short *inode_counter, int *current_inode);
+void   write_dir_data(char *name, int *current_dir_inode, short inode_id);
+void   ls_dir(int current_dir_inode);
+int    ch_dir(char *name, int *current_dir_inode);
+int    directory_remove(char *name, int *current_dir_inode);
+void   remove_file_from_dir(FILE *disk, int parent_offset, int inode_id);
+
+//File functions
+int    file_exists(char *name, int *current_dir_inode, int shallow);
+int    file_create(char *name, short *inode_counter, int *current_dir_inode);
+void   write_data(int fd, int file_offset, char *text);
+void   read_data(int fd, int file_offset, int size);
+void   link_create(char *name, char *src, 
+        short *inode_counter, int *current_inode);
+void   get_parent_path(char *path, char **ret);
+void   get_filename(char *path, char **ret);
+void   increment_link(int target_inode_offset);
+int    decrement_link(int target_inode_offset);
+void   link_remove(char *name, short *inode_counter, int *current_dir_inode);
+void   copy_data(int fd, int file_offset, int size, int dest_fd);
+void   print_tree(int current_dir_inode, int depth);
+void   print_space(int num, int corner);
+
+//Utilities
+void   update_prompt(int current_dir_inode, char *path);
+int    expand_path(char *path, int *current_dir_inode, int shallow); 
+int    insert_entry(int block_offset, char *name, short inode_id);
+short  find_entry(int block_offset, char *name);
+int    remove_entry(int block_offset, char *name);
+void   trim_whitespace(char *name, int *start, int *end);
+void   smart_split(char *args, char **arg1, char **arg2);

@@ -10,13 +10,17 @@ int *open_files;
 int verbose = 1;
 
 //Just for fun
-char prompt_colors[][10] = {BOLDRED, BOLDGREEN, BOLDYELLOW, BOLDBLUE,
-    BOLDMAGENTA, BOLDCYAN, BOLDWHITE};
+char prompt_colors[][10] = {BOLDGREEN, BOLDYELLOW, BOLDBLUE,
+    BOLDMAGENTA, BOLDCYAN};
 
 int main() {
     printf("They did the monster mash!\n");
     path = malloc(MAX_FILENAME_LENGTH);
-    open_files = malloc(MAX_OPEN_FILES * 3 * sizeof(int)); //Half of it is used for flags
+
+    //open_files structure:
+    //[file descriptor] [read/write flag] [file offset]
+    //File descriptor <=> inode_id
+    open_files = malloc(MAX_OPEN_FILES * 3 * sizeof(int));
     int i;
     for(i = 0; i < MAX_OPEN_FILES * 3; i++) {
         open_files[i] = 0;
@@ -33,7 +37,7 @@ int main() {
         char *user_input = malloc(INPUT_BUFFER_SIZE);
         int current_input_size = INPUT_BUFFER_SIZE;
     
-        printf("%s%s%s%s $ ", prompt_colors[rand()%7], prompt, RESET, path);
+        printf("%s%s%s%s $ ", prompt_colors[rand()%5], prompt, RESET, path);
         fflush(NULL);
 
         if (user_input != NULL) {
@@ -50,7 +54,7 @@ int main() {
             user_input[i] = '\0';
         }
         else {
-            fprintf(stderr, "Memory error!\n");
+            fprintf(stderr, BOLDRED "Memory error!\n" RESET);
             break;
         }
 
@@ -69,62 +73,65 @@ void parse_input(char *input, int input_length) {
     input_copy = strndup(input, input_length);
     command = strtok(input, " \n");
     int command_length = strlen(command);
-    if (strcmp(command, "mkfs") == 0) {
+    if (strcmp(command, "mkfs") == 0) { //                                  MKFS
         mkfs();
     }
-    else if(strcmp(command, "mkdir") == 0) {
-        //Send the next token of user input as an argument
+    else if(strcmp(command, "mkdir") == 0) { //                            MKDIR
         make_dir(strtok(NULL, "\n"));
     }
-    else if(strcmp(command, "ls") == 0) {
+    else if(strcmp(command, "ls") == 0) { //                                  LS
         if(strtok(NULL, "\n") != NULL)
             fprintf(stderr, YELLOW "Ignoring arguments\n" RESET);
         ls();
     }
-    else if(strcmp(command, "cd") == 0) {
+    else if(strcmp(command, "cd") == 0) { //                                  CD
         cd(strtok(NULL, "\n"));
     }
-    else if(strcmp(command, "rmdir") == 0) {
+    else if(strcmp(command, "rmdir") == 0) { //                            RMDIR
         rmdir(strtok(NULL, " \n"));
     }
-    else if(strcmp(command, "open") == 0) {
-        //Send everything to open() and parse it there
-        open(strtok(NULL, "\n"));
+    else if(strcmp(command, "open") == 0) { //                              OPEN
+        int fd = open(strtok(NULL, "\n"));
+        if(fd != -1)
+            printf("Opened with file descriptor "GREEN"%d\n"RESET, fd);
     }
-    else if(strcmp(command, "close") == 0) {
+    else if(strcmp(command, "close") == 0) { //                            CLOSE
         close(strtok(NULL, "\n"));
     }
-    else if(strcmp(command, "write") == 0) {
+    else if(strcmp(command, "write") == 0) { //                            WRITE
         write(strtok(NULL, "\n"), atoi(strtok(NULL, " \n")));
     }
-    else if(strcmp(command, "seek") == 0) {
+    else if(strcmp(command, "seek") == 0) { //                              SEEK
         seek(atoi(strtok(NULL, " \n")), atoi(strtok(NULL, " \n")));
     }
-    else if(strcmp(command, "read") == 0) {
+    else if(strcmp(command, "read") == 0) { //                              READ
         read(atoi(strtok(NULL, " \n")), atoi(strtok(NULL, " \n")));
     }
-    else if(strcmp(command, "link") == 0) {
+    else if(strcmp(command, "link") == 0) { //                              LINK
         link(strtok(NULL, " \n"), strtok(NULL, " \n"));
     }
-    else if(strcmp(command, "unlink") == 0) {
+    else if(strcmp(command, "unlink") == 0) { //                          UNLINK
         unlink(strtok(NULL, " \n"));
     }
-    else if(strcmp(command, "cat") == 0) {
+    else if(strcmp(command, "cat") == 0) { //                                CAT
         cat(strtok(NULL, "\n"));
     }
-    else if(strcmp(command, "import") == 0) {
-        import(strtok(NULL, " \n"), strtok(NULL, " \n"));
+    else if(strcmp(command, "import") == 0) { //                          IMPORT
+        import(strtok(NULL, "\n"));
     }
-    else if(strcmp(command, "export") == 0) {
+    else if(strcmp(command, "export") == 0) { //                          EXPORT
         export(strtok(NULL, " \n"), strtok(NULL, " \n"));
     }
-    else if(strcmp(command, "cp") == 0) {
+    else if(strcmp(command, "cp") == 0) { //                                  CP
         cp(strtok(NULL, " \n"), strtok(NULL, " \n"));
     }
-    else if(strcmp(command, "tree") == 0) {
+    else if(strcmp(command, "tree") == 0) { //                              TREE
         tree();
     }
-    else if(strcmp(command, "exit") == 0) {
+    else if(strcmp(command, "stat") == 0) { //                              STAT
+        stat_mm(strtok(NULL, "\n"));
+    }
+    else if(strcmp(command, "exit") == 0) { //                              EXIT
         printf("Bye!\n");
         exit(0);
     }
@@ -138,7 +145,7 @@ void mkfs() {
     printf("Making filesystem...");
     current_dir_inode = disk_create(&inode_counter);
     update_prompt(current_dir_inode, path);
-    printf("Done\n");
+    printf(GREEN "Done\n" RESET);
 }
 
 void make_dir(char *name) {
@@ -206,12 +213,15 @@ void cd(char *name) {
         fprintf(stderr, BOLDRED "Invalid argument\n" RESET);
         return;
     }
+
+    //Check for quotation marks (user need not include them)
     if(name[0] == '"') {
         if(name[strlen(name) - 1] != '"') {
             fprintf(stderr, BOLDRED "Mismatched quotation\n" RESET);
             return;
         }
     }
+
     current_dir_inode = ch_dir(name, &current_dir_inode);
     update_prompt(current_dir_inode, path);
 }
@@ -222,14 +232,8 @@ void rmdir(char *name) {
 
 int open(char *file_flag) {
     //Input has filename (potentially with spaces) and flag
-    
-    wlog("file_flag: %s\n", file_flag);
-
     char *name, *flag;
     smart_split(file_flag, &name, &flag);
-    wlog("open()\n");
-    wlog("name       = %s\n", name);
-    wlog("flag       = %s\n", flag);
     if(name == NULL || strlen(name) == 0) {
         fprintf(stderr, BOLDRED "Invalid file name\n" RESET);
         return -1;
@@ -247,74 +251,8 @@ int open(char *file_flag) {
         return -1;
     }
 
-    /*
-    int start, end;
-    trim_whitespace(file_flag, &start, &end);
-    if(end <= start) {
-        fprintf(stderr, BOLDRED "Invalid \n" RESET);
-        return;
-    }
-
-    //end points to the character after the flag
-    //name_end will point to the space just before the flag
-    int name_end;
-    for(name_end = end - 1; name_end > start; name_end--)
-        if(file_flag[name_end] == ' ')
-            break;
-
-    printf("start: %d\nname_end: %d\nend: %d\n", start, name_end, end);
-
-    char *flag = malloc(end - name_end);
-    strncpy(flag, file_flag + name_end + 1, end - name_end - 1);
-    flag[end - name_end - 1] = '\0';
-    //Check if the flag is valid
-    if(flag == NULL || strlen(flag) == 0) {
-        fprintf(stderr, BOLDRED "Invalid flag. "
-                "Must be 'r', 'w', or 'rw'\n" RESET);
-        return;
-    }
-
-    //Trim the name
-    for(; name_end > start; name_end--)
-        if(file_flag[name_end] != ' ')
-            break;
-    name_end++;
-    //Check if the name is too long or too short
-    if(name_end - start > 32) {
-        fprintf(stderr, BOLDRED "File name must be %d "
-                "or fewer characters long\n" RESET, MAX_FILENAME_LENGTH);
-        return;
-    }
-    if(name_end <= start) {
-        fprintf(stderr, BOLDRED "Invalid name\n" RESET);
-        return;
-    }
-    //name now has just the name
-    char *name = malloc(name_end - start + 1);
-    strncpy(name, file_flag + start, name_end - start);
-    name[name_end - start] = '\0';
-
-    printf("flag: %s\nname: |%s|\n", flag, name);
-    */
-
+    //Check if file exists
     int fd = 0;
-    /*
-    Check if file exists
-    If it doesn't:
-        If reading: error
-        If w or rw: 
-            new file
-            add it to the list of open files
-            increment number of open files
-    If it's already open:
-        return file descriptor
-        say file is already open
-    If it exists:
-        return file descriptor (inode_id)
-        add it to the list of open files
-        increment number of open files
-
-    */
     fd = file_exists(name, &current_dir_inode, 0);
     if (fd == -1) {
         if (strcmp(flag, "r") == 0) {
@@ -325,6 +263,7 @@ int open(char *file_flag) {
             fd = file_create(name, &inode_counter, &current_dir_inode);
         }
     }
+
     //Check if it's already open
     int i;
     for(i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
@@ -334,16 +273,26 @@ int open(char *file_flag) {
             return fd;
         }
     }
+
+    //Find the first free space in open files
     for(i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
         if (open_files[i] == 0) {
-            open_files[i] = fd;
-            open_files[i+1] = (strcmp(flag, "r") == 0) ? 1 : ((strcmp(flag, "w") == 0) ? 2 : 3);
+            open_files[i]   = fd;
+            open_files[i+1] = ((strcmp(flag, "r") == 0) ? 1 : //read
+                              ((strcmp(flag, "w") == 0) ? 2 : //write
+                              3));                            //read/write
             open_files[i+2] = 0;
             n_open_files++;
             break;
         }
     }
-    wlog("Opened file `%s` with file descriptor %d\n", name, fd);
+
+    //Check if we went all the way to the end of open_files
+    if(i >= MAX_OPEN_FILES * 3) {
+        fprintf(stderr, BOLDRED "Too many open files\n" RESET);
+        return -1;
+    }
+
     return fd;
 }
 
@@ -369,11 +318,14 @@ void close(char *name) {
             fprintf(stderr, BOLDYELLOW "Ignoring argument past space\n" RESET);
     }
 
+    //Check if file exists
     int fd = file_exists(trimmed, &current_dir_inode, 0);
     if(fd == -1) {
         fprintf(stderr, BOLDRED "Invalid file argument\n" RESET);
         return;
     }
+
+    //Look for file in open_files
     int i;
     wlog("fd = %d\n", fd);
     for(i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
@@ -434,6 +386,10 @@ void seek(int offset, int fd) {
 }
 
 void read(int size, int fd) {
+    if(fd == 0) {
+        fprintf(stderr, BOLDRED "Invalid file descriptor\n" RESET);
+        return;
+    }
     int i;
     for(i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
         if (open_files[i] == fd) {
@@ -479,22 +435,40 @@ void cat(char *name) {
     }
 }
 
-void import(char *name, char *host_path) {
-    int len = strlen(name);
-    char *file_flag = malloc(strlen(name) + 3);
-    strcpy(file_flag, name);
+void import(char *input) {
+    char *dest_name, *host_name;
+    smart_split(input, &dest_name, &host_name);
+    if(dest_name == NULL || strlen(dest_name) == 0) {
+        fprintf(stderr, BOLDRED "Invalid destination file name\n" RESET);
+        return;
+    }
+    if(host_name == NULL || strlen(host_name) == 0) {
+        fprintf(stderr, BOLDRED "Invalid host file name\n" RESET);
+        return;
+    }
+    if(strchr(dest_name, '/') != NULL) {
+        fprintf(stderr, BOLDRED "Invalid destination file name\n" RESET);
+        return;
+    }
+
+    int len = strlen(dest_name);
+    char *file_flag = malloc(len + 3);
+
+    strcpy(file_flag, dest_name);
     file_flag[len] = ' ';
     file_flag[len + 1] = 'w';
     file_flag[len + 2] = '\n';
+
     char buffer[1024];
     int fd = open(file_flag);
     if (fd != -1) {
-        FILE *hfile = fopen(host_path, "r");
+        FILE *hfile = fopen(host_name, "r");
         while(fgets(buffer, sizeof(buffer), hfile) != NULL) {
             write(buffer, fd);
         }
-        close(name);
+        close(dest_name);
     }
+
 }
 
 void export(char *host_path, char *name) {
@@ -520,8 +494,9 @@ void cp(char *dest, char *src) {
     verbose = 0;
     int current_dir = current_dir_inode;
     int src_fd = find_inode_id(expand_path(src, &current_dir_inode, 0));
-    char *dest_parent = get_parent_path(dest);
-    char *dest_name = get_filename(dest);
+    char *dest_parent, *dest_name;
+    get_parent_path(dest, &dest_parent);
+    get_filename(dest, &dest_name);
     cd(dest_parent);
 
     //Open a file as destination
@@ -541,4 +516,8 @@ void cp(char *dest, char *src) {
 
 void tree() {
     print_tree(current_dir_inode, 0);
+}
+
+void stat_mm(char *name) {
+
 }

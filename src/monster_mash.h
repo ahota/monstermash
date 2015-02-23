@@ -6,26 +6,28 @@
 #include<time.h>
 #include<stdarg.h>
 
-#define INPUT_BUFFER_SIZE 128 //Initial size, dynamic reallocation is used
-#define BLOCKS_PER_INODE 10
-#define BLOCK_SIZE 4096
-#define DISK_SIZE 104857600
-#define INODE_TABLE_SIZE 8192 //In terms of bytes = 1024 * INODE_SIZE(8)
-#define INODE_SIZE 8
-#define FS_PATH "../fs/mmash.fs"
-#define MAX_FILENAME_LENGTH 32
-#define MAX_OPEN_FILES 1024
-#define METADATA_SIZE (MAX_FILENAME_LENGTH + 4 + 2)
+//Initial user-input size
+#define INPUT_BUFFER_SIZE    128 
+#define BLOCKS_PER_INODE     10
+#define BLOCK_SIZE           4096
+#define DISK_SIZE            104857600
+#define INODE_TABLE_SIZE     8192 //in bytes, 1024 * INODE_SIZE
+#define INODE_SIZE           8
+#define FS_PATH              "../fs/mmash.fs"
+#define MAX_FILENAME_LENGTH  32
+#define MAX_OPEN_FILES       1024
+#define METADATA_SIZE        (MAX_FILENAME_LENGTH + 4 + 2)
 #define DIR_TABLE_ENTRY_SIZE (MAX_FILENAME_LENGTH + 4)
-#define END -1
+#define END                  -1
 
-#define RED     "\x1b[31m"
-#define GREEN   "\x1b[32m"
-#define YELLOW  "\x1b[33m"
-#define BLUE    "\x1b[34m"
-#define MAGENTA "\x1b[35m"
-#define CYAN    "\x1b[36m"
-#define RESET   "\x1b[0m"
+//Colors!
+#define RED         "\033[31m"
+#define GREEN       "\033[32m"
+#define YELLOW      "\033[33m"
+#define BLUE        "\033[34m"
+#define MAGENTA     "\033[35m"
+#define CYAN        "\033[36m"
+#define RESET       "\033[0m"
 
 #define BOLDBLACK   "\033[1m\033[30m"      /* Bold Black */
 #define BOLDRED     "\033[1m\033[31m"      /* Bold Red */
@@ -36,24 +38,24 @@
 #define BOLDCYAN    "\033[1m\033[36m"      /* Bold Cyan */
 #define BOLDWHITE   "\033[1m\033[37m"      /* Bold White */
 
-//Function declarations
+//Functions
 void parse_input(char *input, int input_length);
 void mkfs();
-void make_dir(char*);
+void make_dir(char* dir_name);
 void ls();
-void cd(char*);
-void rmdir(char*);
-int  open(char*);
+void cd(char *dir_name);
+void rmdir(char *dir_name);
+int  open(char *file_flag);
 void close(char *name);
-void write(char*, int);
-void seek(int, int);
-void read(int, int);
-void link(char*, char*);
-void unlink(char*);
-void cat(char*);
-void import(char*, char*);
-void export(char*, char*);
-void wlog(char*, ...);
-void cp(char*, char*);
+void write(char *text, int file_descriptor);
+void seek(int offset, int file_descriptor);
+void read(int num_bytes, int file_descriptor);
+void link(char *dest, char *src);
+void unlink(char *link_name);
+void cat(char *file_name);
+void import(char *input);
+void export(char *, char *);
+void wlog(char *format, ...);
+void cp(char *dest, char *src);
 void tree();
-
+void stat_mm(char *name);
