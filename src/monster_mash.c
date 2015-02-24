@@ -83,6 +83,12 @@ int main(int argc, char **argv) {
     char root[2] = ".";
     cd(root);
 
+    //If mmash was started as a server, it should wait until a user conencts
+    //After connection:
+    //  write prompt to socket
+    //  read user input
+    //  write output to socket
+
     while(1) {
         char *user_input = malloc(INPUT_BUFFER_SIZE);
         int current_input_size = INPUT_BUFFER_SIZE;
@@ -182,11 +188,20 @@ void parse_input(char *input, int input_length) {
         stat_mm(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "exit") == 0) { //                              EXIT
-        printf("Bye!\n");
+        if(server) {
+            //Write to socket before closing
+            close(sockfd);
+        }
+        else
+            printf("Bye!\n");
+
         exit(0);
     }
     else {
-        printf("Invalid command: %s\n", command);
+        if(server) //write to socket
+            continue;
+        else
+            printf("Invalid command: %s\n", command);
     }
 }
 
