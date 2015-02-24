@@ -1,20 +1,70 @@
 #include "monster_mash.h"
 
 //Globals
-short inode_counter = 0; //Bad global inode counter
+short inode_counter = 0; //Used to generate inode IDs
 int current_dir_inode = 0; //Offset of the current directory's inode
 int n_open_files = 0;
 char *prompt = "monster@test:";
 char *path;
 int *open_files;
 int verbose = 1;
+int server = 0;
+
+//socket file descriptors and port
+int sock_fd, new_sock_fd, port;
+//Length of client address
+socklen_t client_length;
+//input buffer from client
+char buffer[INPUT_BUFFER_SIZE];
+//server and client addresses
+struct sockaddr_in server_address, client_address;
 
 //Just for fun
-char prompt_colors[][10] = {BOLDGREEN, BOLDYELLOW, BOLDBLUE,
+char prompt_colors[][10] = {BOLDGREEN, BOLDYELLOW, BOLDBLUE, 
     BOLDMAGENTA, BOLDCYAN};
 
-int main() {
-    printf("They did the monster mash!\n");
+int main(int argc, char **argv) {
+    //Check if user is starting as a server
+    if(argc > 1) {
+        if(strcmp(argv[1], "-s") == 0) {
+            server = 1;
+            if(argc > 2)
+                port = atoi(argv[2]);
+            else
+                port = 1962; //year "Monster Mash" was released as a single
+        }
+    }
+
+    //set up server stuff
+    if(server) {
+        //Create a socket
+        sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+        if(sock_fd < 0) {
+            fprintf(stderr, BOLDRED "Could not open socket\n" RESET);
+            return 1;
+        }
+        //zero out the address
+        bzero((char *)&server_address, sizeof(server_address));
+
+        //set up the address
+        server_address.sin_family = AF_INET;
+        server_address.sin_addr.s_addr = INADDR_ANY;
+        server_address.sin_port = htons(port);
+
+        //bind to socket
+        if(bind(sock_fd, (struct sockaddr *)&server_address,
+           sizeof(server_address)) < 0) {
+            fprintf(stderr, BOLDRED "Bind failed\n" RESET);
+            return -1;
+        }
+    }
+
+
+    if(!server)
+        printf("They did the Monster Mash!\n");
+    else
+        printf("It was a graveyard smash!\n");
+
     path = malloc(MAX_FILENAME_LENGTH);
 
     //open_files structure:

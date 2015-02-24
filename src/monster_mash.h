@@ -6,7 +6,12 @@
 #include<time.h>
 #include<stdarg.h>
 
-//Initial user-input size
+//For server puposes
+#include<sys/types.h>
+#include<sys/socket.h>
+#include<netinet/in.h>
+
+//Filesystem constants
 #define INPUT_BUFFER_SIZE    128 
 #define BLOCKS_PER_INODE     10
 #define BLOCK_SIZE           4096
