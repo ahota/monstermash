@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
     while(1) {
         char *user_input = malloc(INPUT_BUFFER_SIZE);
     
-        printf("%s%s%s%s $ ", prompt_colors[rand()%5], prompt, RESET, path);
+        respond("%s%s%s%s $ ", prompt_colors[rand()%5], prompt, RESET, path);
         fflush(NULL);
 
         if(server)
@@ -252,6 +252,10 @@ void parse_input(char *input, int input_length) {
         else
             printf("Invalid command: %s\n", command);
     }
+    if (server)
+        sleep(0.1);
+        //respond("MM_RESPONSE_COMPLETE"); // Tell the client that this command is done
+        //We need to go with the concatenation approach
 }
 
 void mkfs() {    
@@ -593,6 +597,28 @@ void export(char *host_path, char *name) {
     fclose(stdout);
     verbose = 1;
     stdout = temp_stdout;
+}
+
+void respond(char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    if (server) {
+        char *response = malloc(INPUT_BUFFER_SIZE);
+        int size;
+        int cur_size = INPUT_BUFFER_SIZE;
+        if((size = vsnprintf(response, cur_size, format, args)) > cur_size) {
+            response = realloc(response, size);
+            vsnprintf(response, cur_size, format, args);
+        }
+        size = write(new_sock_fd, response, size);
+        if (size < 0) {
+            fprintf(stderr, BOLDRED "Error writing to client\n" RESET);
+        }
+    }
+    else {
+        vprintf(format, args);
+    }
+    va_end(args);
 }
 
 void wlog(char *format, ...) {

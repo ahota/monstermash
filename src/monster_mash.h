@@ -65,6 +65,7 @@ void cat(char *file_name);
 void import(char *input);
 void export(char *, char *);
 void wlog(char *format, ...);
+void respond(char *format, ...);
 void cp(char *dest, char *src);
 void tree();
 void stat_mm(char *name);
