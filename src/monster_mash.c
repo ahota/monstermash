@@ -9,6 +9,7 @@ char *path;
 int *open_files;
 int verbose = 1;
 int server = 0;
+char *server_greeting = "It was a graveyard smash!\n";
 
 //socket file descriptors and port
 int sock_fd, new_sock_fd, port;
@@ -37,7 +38,7 @@ int main(int argc, char **argv) {
 
     //set up server stuff
     if(server) {
-        //Create a socket
+        //create a socket
         sock_fd = socket(AF_INET, SOCK_STREAM, 0);
         if(sock_fd < 0) {
             fprintf(stderr, BOLDRED "Could not open socket\n" RESET);
@@ -52,18 +53,35 @@ int main(int argc, char **argv) {
         server_address.sin_port = htons(port);
 
         //bind to socket
-        if(bind(sock_fd, (struct sockaddr *)&server_address,
-           sizeof(server_address)) < 0) {
-            fprintf(stderr, BOLDRED "Bind failed\n" RESET);
+        int err;
+        if((err = bind(sock_fd, (struct sockaddr *)&server_address,
+           sizeof(server_address))) < 0) {
+            fprintf(stderr, BOLDRED "Bind failed err=%d\n" RESET, err);
+            return -1;
+        }
+
+        //listen to this socket
+        listen(sock_fd, 5);
+        client_length = sizeof(client_address);
+        //block until we receive a connection
+        new_sock_fd = accept(sock_fd, (struct sockaddr *)&client_address, 
+                &client_length);
+        if(new_sock_fd < 0) {
+            fprintf(stderr, BOLDRED "Error accepting connection\n" RESET);
             return -1;
         }
     }
 
 
-    if(!server)
-        printf("They did the Monster Mash!\n");
+    if(server) {
+        int n = write(new_sock_fd, server_greeting,
+                strlen(server_greeting) + 1);
+        if(n < strlen(server_greeting) + 1)
+            fprintf(stderr, YELLOW "Warning: writing to client" 
+                    "may have failed\n" RESET);
+    }
     else
-        printf("It was a graveyard smash!\n");
+        printf("They did the Monster Mash!\n");
 
     path = malloc(MAX_FILENAME_LENGTH);
 
@@ -91,29 +109,16 @@ int main(int argc, char **argv) {
 
     while(1) {
         char *user_input = malloc(INPUT_BUFFER_SIZE);
-        int current_input_size = INPUT_BUFFER_SIZE;
     
         printf("%s%s%s%s $ ", prompt_colors[rand()%5], prompt, RESET, path);
         fflush(NULL);
 
-        if (user_input != NULL) {
-            int c = EOF;
-            int i = 0;
-            while((c = getchar()) != '\n' && c != EOF) {
-                user_input[i++] = c;
-                if (i == current_input_size) {
-                    //Reallocate more space
-                    current_input_size = i + INPUT_BUFFER_SIZE;
-                    user_input = realloc(user_input, current_input_size);
-                }
-            }            
-            user_input[i] = '\0';
-        }
-        else {
-            fprintf(stderr, BOLDRED "Memory error!\n" RESET);
-            break;
-        }
+        if(server)
+            get_remote_input(new_sock_fd, &user_input);
+        else
+            get_local_input(&user_input);
 
+        printf(YELLOW "DEBUG: %s" RESET, user_input);
         int input_length = strlen(user_input);
         if(user_input[0] != '\n') {
             parse_input(user_input, input_length);
@@ -122,6 +127,39 @@ int main(int argc, char **argv) {
         free(user_input);
     }
     return 0;
+}
+
+//Get user input from stdin
+void get_local_input(char **user_input){
+    int current_input_size = INPUT_BUFFER_SIZE;
+    int c = EOF;
+    int i = 0;
+    while((c = getchar()) != '\n' && c != EOF) {
+        *user_input[i++] = c;
+        if (i == current_input_size) {
+            //Reallocate more space
+            current_input_size = i + INPUT_BUFFER_SIZE;
+            *user_input = realloc(*user_input, current_input_size);
+        }
+    }            
+    user_input[i] = '\0';
+}
+
+//Get user input from the given socket
+void get_remote_input(int socket, char **user_input) {
+    bzero(*user_input, INPUT_BUFFER_SIZE);
+    int current_input_size = INPUT_BUFFER_SIZE;
+    int n;
+    //block until we get input on this socket
+    while((n = read(socket, *user_input, INPUT_BUFFER_SIZE - 1)) == current_input_size) {
+        current_input_size += INPUT_BUFFER_SIZE;
+        *user_input = realloc(*user_input, current_input_size);
+    }
+    if(n < 0) {
+        fprintf(stderr, BOLDRED "Error reading from client\n" RESET);
+        return;
+    }
+    printf(YELLOW "CLIENT: %s" RESET, *user_input);
 }
 
 void parse_input(char *input, int input_length) {
@@ -158,7 +196,7 @@ void parse_input(char *input, int input_length) {
         write(strtok(NULL, "\n"), atoi(strtok(NULL, " \n")));
     }
     else if(strcmp(command, "seek") == 0) { //                              SEEK
-        seek(atoi(strtok(NULL, " \n")), atoi(strtok(NULL, " \n")));
+        seek_mm(atoi(strtok(NULL, " \n")), atoi(strtok(NULL, " \n")));
     }
     else if(strcmp(command, "read") == 0) { //                              READ
         read(atoi(strtok(NULL, " \n")), atoi(strtok(NULL, " \n")));
@@ -190,7 +228,8 @@ void parse_input(char *input, int input_length) {
     else if(strcmp(command, "exit") == 0) { //                              EXIT
         if(server) {
             //Write to socket before closing
-            close(sockfd);
+            close(sock_fd);
+            close(new_sock_fd);
         }
         else
             printf("Bye!\n");
@@ -199,7 +238,7 @@ void parse_input(char *input, int input_length) {
     }
     else {
         if(server) //write to socket
-            continue;
+            write(new_sock_fd, "Invalid command\n", 17);
         else
             printf("Invalid command: %s\n", command);
     }
@@ -295,7 +334,7 @@ void rmdir(char *name) {
     directory_remove(name, &current_dir_inode);
 }
 
-int open(char *file_flag) {
+int open_mm(char *file_flag) {
     //Input has filename (potentially with spaces) and flag
     char *name, *flag;
     smart_split(file_flag, &name, &flag);
@@ -361,7 +400,7 @@ int open(char *file_flag) {
     return fd;
 }
 
-void close(char *name) {
+void close_mm(char *name) {
     //name may have leading/trailing white space
     int start, end;
     char *trimmed;
@@ -406,7 +445,7 @@ void close(char *name) {
     fprintf(stderr, BOLDRED "File not found\n" RESET);
 }
 
-void write(char *text, int fd) {
+void write_mm(char *text, int fd) {
    /*
     Check to see if file is open
     If it's not:
@@ -438,7 +477,7 @@ void write(char *text, int fd) {
        
 }
 
-void seek(int offset, int fd) {
+void seek_mm(int offset, int fd) {
     int i;
     for (i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
         if (open_files[i] == fd) {
@@ -450,7 +489,7 @@ void seek(int offset, int fd) {
     }
 }
 
-void read(int size, int fd) {
+void read_mm(int size, int fd) {
     if(fd == 0) {
         fprintf(stderr, BOLDRED "Invalid file descriptor\n" RESET);
         return;

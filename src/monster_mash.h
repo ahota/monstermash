@@ -5,6 +5,7 @@
 #include<sys/stat.h>
 #include<time.h>
 #include<stdarg.h>
+#include<error.h>
 
 //For server puposes
 #include<sys/types.h>
@@ -44,17 +45,19 @@
 #define BOLDWHITE            "\033[1m\033[37m"
 
 //Functions
+void get_local_input(char **user_input);
+void get_remote_input(int socket, char **user_input);
 void parse_input(char *input, int input_length);
 void mkfs();
 void make_dir(char* dir_name);
 void ls();
 void cd(char *dir_name);
 void rmdir(char *dir_name);
-int  open(char *file_flag);
-void close(char *name);
-void write(char *text, int file_descriptor);
-void seek(int offset, int file_descriptor);
-void read(int num_bytes, int file_descriptor);
+int  open_mm(char *file_flag);
+void close_mm(char *name);
+void write_mm(char *text, int file_descriptor);
+void seek_mm(int offset, int file_descriptor);
+void read_mm(int num_bytes, int file_descriptor);
 void link(char *dest, char *src);
 void unlink(char *link_name);
 void cat(char *file_name);
