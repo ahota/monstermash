@@ -135,26 +135,28 @@ void get_local_input(char **user_input){
     int c = EOF;
     int i = 0;
     while((c = getchar()) != '\n' && c != EOF) {
-        *user_input[i++] = c;
+        (*user_input)[i++] = c;
         if (i == current_input_size) {
             //Reallocate more space
             current_input_size = i + INPUT_BUFFER_SIZE;
             *user_input = realloc(*user_input, current_input_size);
         }
     }            
-    user_input[i] = '\0';
+    (*user_input)[i] = '\0';
 }
 
 //Get user input from the given socket
 void get_remote_input(int socket, char **user_input) {
     bzero(*user_input, INPUT_BUFFER_SIZE);
     int current_input_size = INPUT_BUFFER_SIZE;
-    int n;
+    int n = 0;
     //block until we get input on this socket
-    while((n = read(socket, *user_input, INPUT_BUFFER_SIZE - 1)) == current_input_size) {
+    while((n = read(socket, *user_input + n, current_input_size - 1)) == current_input_size) {
         current_input_size += INPUT_BUFFER_SIZE;
         *user_input = realloc(*user_input, current_input_size);
     }
+    //http://stackoverflow.com/questions/12773509/read-is-not-blocking-in-socket-programming
+    wlog("N: %d\n", n);
     if(n < 0) {
         fprintf(stderr, BOLDRED "Error reading from client\n" RESET);
         return;
@@ -164,6 +166,7 @@ void get_remote_input(int socket, char **user_input) {
 
 void parse_input(char *input, int input_length) {
     char *command, *input_copy;
+    wlog("Input: %s\n", input);
     input_copy = strndup(input, input_length);
     command = strtok(input, " \n");
     int command_length = strlen(command);
