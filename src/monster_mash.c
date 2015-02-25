@@ -70,6 +70,8 @@ int main(int argc, char **argv) {
             fprintf(stderr, BOLDRED "Error accepting connection\n" RESET);
             return -1;
         }
+        char *a = inet_ntoa(client_address.sin_addr);
+        printf(YELLOW "Client connected %s\n" RESET, a);
     }
 
 
@@ -120,6 +122,10 @@ int main(int argc, char **argv) {
 
         printf(YELLOW "DEBUG: %s" RESET, user_input);
         int input_length = strlen(user_input);
+        if(input_length == 0) {
+            printf(YELLOW "Client disconnected\n" RESET);
+            break;
+        }
         if(user_input[0] != '\n') {
             parse_input(user_input, input_length);
         }
@@ -150,12 +156,13 @@ void get_remote_input(int socket, char **user_input) {
     bzero(*user_input, INPUT_BUFFER_SIZE);
     int current_input_size = INPUT_BUFFER_SIZE;
     int n = 0;
+    int offset = 0;
     //block until we get input on this socket
-    while((n = read(socket, *user_input + n, current_input_size - 1)) == current_input_size) {
+    while((n = read(socket, *user_input + offset, current_input_size - 1)) == current_input_size) {
         current_input_size += INPUT_BUFFER_SIZE;
         *user_input = realloc(*user_input, current_input_size);
+        offset += n;
     }
-    //http://stackoverflow.com/questions/12773509/read-is-not-blocking-in-socket-programming
     wlog("N: %d\n", n);
     if(n < 0) {
         fprintf(stderr, BOLDRED "Error reading from client\n" RESET);

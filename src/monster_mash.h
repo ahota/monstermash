@@ -11,6 +11,7 @@
 #include<sys/types.h>
 #include<sys/socket.h>
 #include<netinet/in.h>
+#include<arpa/inet.h>
 
 //Filesystem constants
 #define INPUT_BUFFER_SIZE    128 
