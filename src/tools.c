@@ -355,15 +355,15 @@ void ls_dir(int current_dir_inode) {
                 char type = 0;
                 fread(&type, sizeof(char), 1, disk);
                 if (type == 'd') {
-                    respond(BOLDBLUE "%-*s" RESET,
+                    add_to_response(BOLDBLUE "%-*s" RESET,
                             MAX_FILENAME_LENGTH + 1, name);
                 }
                 else if (type == 'f') {
-                    respond(RESET "%-*s" RESET,
+                    add_to_response(RESET "%-*s" RESET,
                             MAX_FILENAME_LENGTH + 1, name);
                 }
                 else if (type == 'l'){
-                    respond(CYAN "%-*s" RESET,
+                    add_to_response(CYAN "%-*s" RESET,
                             MAX_FILENAME_LENGTH + 1, name); 
                 }
                 else {
@@ -371,11 +371,11 @@ void ls_dir(int current_dir_inode) {
                 }
                 counter = (counter + 1) % 2;
                 if(!counter)
-                    respond("\n");
+                    add_to_response("\n");
             }
         }
     } while((data_block_offset = next_block_offset) != -1);
-    respond("\n");
+    add_to_response("\n");
     commit_disk(disk);
 }
 

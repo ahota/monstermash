@@ -9,7 +9,11 @@ char *path;
 int *open_files;
 int verbose = 1;
 int server = 0;
+char *local_greeting = "They did the Monster Mash!\n";
 char *server_greeting = "It was a graveyard smash!\n";
+char *full_response;
+int response_length;
+int response_offset;
 
 //socket file descriptors and port
 int sock_fd, new_sock_fd, port;
@@ -75,15 +79,10 @@ int main(int argc, char **argv) {
     }
 
 
-    if(server) {
-        int n = write(new_sock_fd, server_greeting,
-                strlen(server_greeting) + 1);
-        if(n < strlen(server_greeting) + 1)
-            fprintf(stderr, YELLOW "Warning: writing to client" 
-                    "may have failed\n" RESET);
-    }
+    if(server)
+        add_to_response(server_greeting);
     else
-        printf("They did the Monster Mash!\n");
+        add_to_response(local_greeting);
 
     path = malloc(MAX_FILENAME_LENGTH);
 
@@ -112,8 +111,9 @@ int main(int argc, char **argv) {
     while(1) {
         char *user_input = malloc(INPUT_BUFFER_SIZE);
     
-        respond("%s%s%s%s $ ", prompt_colors[rand()%5], prompt, RESET, path);
-        fflush(NULL);
+        add_to_response("%s%s%s%s $ ", prompt_colors[rand()%5],
+                prompt, RESET, path);
+        respond();
 
         if(server)
             get_remote_input(new_sock_fd, &user_input);
@@ -195,21 +195,21 @@ void parse_input(char *input, int input_length) {
         rmdir(strtok(NULL, " \n"));
     }
     else if(strcmp(command, "open") == 0) { //                              OPEN
-        int fd = open(strtok(NULL, "\n"));
+        int fd = open_mm(strtok(NULL, "\n"));
         if(fd != -1)
             printf("Opened with file descriptor "GREEN"%d\n"RESET, fd);
     }
     else if(strcmp(command, "close") == 0) { //                            CLOSE
-        close(strtok(NULL, "\n"));
+        close_mm(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "write") == 0) { //                            WRITE
-        write(strtok(NULL, "\n"), atoi(strtok(NULL, " \n")));
+        write_mm(strtok(NULL, "\n"), atoi(strtok(NULL, " \n")));
     }
     else if(strcmp(command, "seek") == 0) { //                              SEEK
         seek_mm(atoi(strtok(NULL, " \n")), atoi(strtok(NULL, " \n")));
     }
     else if(strcmp(command, "read") == 0) { //                              READ
-        read(atoi(strtok(NULL, " \n")), atoi(strtok(NULL, " \n")));
+        read_mm(atoi(strtok(NULL, " \n")), atoi(strtok(NULL, " \n")));
     }
     else if(strcmp(command, "link") == 0) { //                              LINK
         link(strtok(NULL, " \n"), strtok(NULL, " \n"));
@@ -252,10 +252,7 @@ void parse_input(char *input, int input_length) {
         else
             printf("Invalid command: %s\n", command);
     }
-    if (server)
-        sleep(0.1);
-        //respond("MM_RESPONSE_COMPLETE"); // Tell the client that this command is done
-        //We need to go with the concatenation approach
+    respond(); //Send any existing response to the user
 }
 
 void mkfs() {    
@@ -582,7 +579,7 @@ void import(char *input) {
     if (fd != -1) {
         FILE *hfile = fopen(host_name, "r");
         while(fgets(buffer, sizeof(buffer), hfile) != NULL) {
-            write(buffer, fd);
+            write_mm(buffer, fd);
         }
         close(dest_name);
     }
@@ -599,26 +596,41 @@ void export(char *host_path, char *name) {
     stdout = temp_stdout;
 }
 
-void respond(char *format, ...) {
+void add_to_response(char *format, ...) {
+    //allocate memory if needed
+    if(full_response == NULL) {
+        full_response = malloc(INPUT_BUFFER_SIZE);
+    }
     va_list args;
     va_start(args, format);
-    if (server) {
-        char *response = malloc(INPUT_BUFFER_SIZE);
-        int size;
-        int cur_size = INPUT_BUFFER_SIZE;
-        if((size = vsnprintf(response, cur_size, format, args)) > cur_size) {
-            response = realloc(response, size);
-            vsnprintf(response, cur_size, format, args);
-        }
-        size = write(new_sock_fd, response, size);
-        if (size < 0) {
-            fprintf(stderr, BOLDRED "Error writing to client\n" RESET);
-        }
+    //see how big the insertion will be
+    char *temp =  malloc(10);
+    int size = vsnprintf(temp, 10, format, args);
+    //if there is not enough free space (likely), reallocate
+    //yeah...magic numbers, yay
+    if(size > 9) {
+        temp = realloc(temp, size + 1);
+        vsnprintf(temp, size + 1, format, args);
     }
-    else {
-        vprintf(format, args);
-    }
+    temp[size] = '\0';
+    full_response = realloc(full_response, strlen(full_response) + size + 1);
+    strncat(full_response, temp, size);
     va_end(args);
+    wlog(YELLOW "DEBUG: current response:\n\t%s\n" RESET, full_response);
+}
+
+void respond() {
+    if(full_response != NULL) {
+        if(server) {
+            int n = write(new_sock_fd, full_response, response_length + 1);
+            if(n < 0)
+                printf(YELLOW "Warning: error writing to client\n" RESET);
+        }
+        else
+            printf("%s", full_response);
+        //Clear the response for the next command
+        full_response = NULL;
+    }
 }
 
 void wlog(char *format, ...) {
