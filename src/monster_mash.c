@@ -252,7 +252,7 @@ void parse_input(char *input, int input_length) {
         else
             printf("Invalid command: %s\n", command);
     }
-    respond(); //Send any existing response to the user
+    //respond(); //Send any existing response to the user
 }
 
 void mkfs() {    
@@ -606,6 +606,8 @@ void add_to_response(char *format, ...) {
     //see how big the insertion will be
     char *temp =  malloc(10);
     int size = vsnprintf(temp, 10, format, args);
+    va_end(args);
+    va_start(args, format);
     //if there is not enough free space (likely), reallocate
     //yeah...magic numbers, yay
     if(size > 9) {
@@ -622,7 +624,7 @@ void add_to_response(char *format, ...) {
 void respond() {
     if(full_response != NULL) {
         if(server) {
-            int n = write(new_sock_fd, full_response, response_length + 1);
+            int n = write(new_sock_fd, full_response, strlen(full_response));
             if(n < 0)
                 printf(YELLOW "Warning: error writing to client\n" RESET);
         }
