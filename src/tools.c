@@ -94,7 +94,7 @@ FILE *access_disk(int first_access) {
         return disk;
     }
     else {
-        fprintf(stderr, "Could not access disk. \n");
+        add_to_response("Could not access disk. \n");
         return NULL;
     }
 }
@@ -104,7 +104,7 @@ int commit_disk(FILE *disk) {
     int ret = fclose(disk); 
     disk = 0;
     if (ret) {
-        fprintf(stderr, "Could not commit disk correctly. \n");
+        add_to_response("Could not commit disk correctly. \n");
     }
     return ret;
 }
@@ -124,7 +124,7 @@ short inode_create(char *name, char type, short *inode_counter) {
         }
     }
     if (offset == INODE_TABLE_SIZE) {
-        fprintf(stderr, "inode table full\n");
+        add_to_response("inode table full\n");
         return -1;
     }
 
@@ -161,7 +161,7 @@ int block_create(char *name) {
     }
     //Check if offset reached the end
     if (offset == DISK_SIZE) {
-        fprintf(stderr, "Disk is full!\n");
+        add_to_response("Disk is full!\n");
         return -1;
     }
 
@@ -367,7 +367,7 @@ void ls_dir(int current_dir_inode) {
                             MAX_FILENAME_LENGTH + 1, name); 
                 }
                 else {
-                    fprintf(stderr, "Unknown element type %c\n", type);
+                    add_to_response("Unknown element type %c\n", type);
                 }
                 counter = (counter + 1) % 2;
                 if(!counter)
@@ -402,7 +402,7 @@ int find_inode_offset(short inode_id) {
         }
     }
     //Weird error that hopefully never happens
-    fprintf(stderr, "Couldn't find inode %d\n", inode_id);
+    add_to_response("Couldn't find inode %d\n", inode_id);
     commit_disk(disk);
     return -1;
 }
@@ -451,7 +451,7 @@ int directory_remove(char *name, int *current_dir_inode) {
 
     //rmdir_offset was not updated in the loop
     if(rmdir_inode_offset == 0) {
-        fprintf(stderr, BOLDRED "Invalid directory name\n" RESET);
+        add_to_response(BOLDRED "Invalid directory name\n" RESET);
         return -1;
     }
 
@@ -466,7 +466,7 @@ int directory_remove(char *name, int *current_dir_inode) {
         short temp_id = find_entry(data_block_offset, NULL);
         //Something was in this table
         if(temp_id != -1) {
-            fprintf(stderr, BOLDRED "Cannot delete non-empty directory\n"
+            add_to_response(BOLDRED "Cannot delete non-empty directory\n"
                     RESET);
             return -1;
         }
@@ -495,7 +495,7 @@ int directory_remove(char *name, int *current_dir_inode) {
     } while((data_block_offset = next_block_offset) != -1);
 
     //Who knows what happened
-    fprintf(stderr, BOLDRED "Unknown error occurred when deleting directory\n"
+    add_to_response(BOLDRED "Unknown error occurred when deleting directory\n"
             RESET);
     commit_disk(disk);
     return -1;
@@ -529,7 +529,7 @@ int file_exists(char *name, int *current_dir_inode, int shallow) {
                     fseek(disk, sizeof(short), SEEK_CUR);
                     fread(&data_block_offset, sizeof(int), 1, disk);
                     fseek(disk, data_block_offset + METADATA_SIZE, SEEK_SET);
-                    printf("looking at %d\n", data_block_offset +
+                    wlog("looking at %d\n", data_block_offset +
                             METADATA_SIZE);
                     fread(&ret_id, sizeof(int), 1, disk);
                 }
@@ -624,7 +624,7 @@ void link_remove(char *name, short *inode_counter, int *current_dir_inode) {
         //Delete that inode and its data if necessary
         wipe(disk, link_inode_offset, INODE_SIZE);
         fseek(disk, data_block_offset + METADATA_SIZE, SEEK_SET);
-        printf("Position of data in link: %d\n",
+        wlog("Position of data in link: %d\n",
                 data_block_offset + METADATA_SIZE);
         int target_inode_id;
         fread(&target_inode_id, sizeof(int), 1, disk);
@@ -654,7 +654,7 @@ void link_remove(char *name, short *inode_counter, int *current_dir_inode) {
         remove_file_from_dir(disk, *current_dir_inode, link_inode_id);
     }
     else {
-        fprintf(stderr, BOLDRED "Cannot unlink directories.\n" RESET);
+        add_to_response(BOLDRED "Cannot unlink directories.\n" RESET);
     }
     return;
 }
@@ -711,7 +711,7 @@ void write_data(int fd, int file_offset, char *text) {
         fseek(disk, data_block_offset + MAX_FILENAME_LENGTH, SEEK_SET);
         fread(&data_block_offset, sizeof(int), 1, disk);
         if (data_block_offset == -1) {
-            fprintf(stderr, BOLDRED "ERROR: Cannot write past end of file\n"
+            add_to_response(BOLDRED "ERROR: Cannot write past end of file\n"
                     RESET);
             commit_disk(disk);
             return;
@@ -766,7 +766,7 @@ void read_data(int fd, int file_offset, int size) {
     char *text = malloc(this_block_text + 1);
     fread(text, sizeof(char), this_block_text, disk);
     text[this_block_text] = '\0';
-    printf("%s", text);
+    add_to_response("%s", text);
     free(text);
 
     if (size > this_block_text) {
@@ -781,7 +781,7 @@ void read_data(int fd, int file_offset, int size) {
         }
     }
     commit_disk(disk);
-    printf("\n");
+    add_to_response("\n");
 }
 
 int expand_path(char *path, int *current_dir_inode, int shallow) {
@@ -793,7 +793,7 @@ int expand_path(char *path, int *current_dir_inode, int shallow) {
     char *path_start = path;
     if(path[0] == '"') {
         if(path[strlen(path) - 1] != '"') {
-            fprintf(stderr, BOLDRED "Mismatched quotation\n" RESET);
+            add_to_response(BOLDRED "Mismatched quotation\n" RESET);
             return -1;
         }
         path[strlen(path) - 1] = '\0';
@@ -808,10 +808,10 @@ int expand_path(char *path, int *current_dir_inode, int shallow) {
          * Check if token exists
          * Go to its inode
          */
-        printf("Looking for: %s\n", token);
+        wlog("Looking for: %s\n", token);
         int file_check = file_exists(token, &temp_dir_inode, shallow);
         if(file_check == -1) {
-            fprintf(stderr, BOLDRED "Invalid path\n" RESET);
+            add_to_response(BOLDRED "Invalid path\n" RESET);
             return -1;
         }
         temp_dir_inode = find_inode_offset((short)file_check);
@@ -829,7 +829,7 @@ void get_parent_path(char *path, char **ret) {
         (*ret)[1] = '\0';
         return;
     }
-    printf("path: %p\nlast_slash: %p\n", path, last_slash);
+    wlog("path: %p\nlast_slash: %p\n", path, last_slash);
     *ret = malloc(last_slash - path + 2);
     strncpy(*ret, path, last_slash - path);
     (*ret)[last_slash - path] = '\0';
@@ -900,16 +900,16 @@ void print_space(int num, int corner) {
         return;
     }
     for (i = 0; i < num - 2; i++) {
-        printf(" ");
+        add_to_response(" ");
     }
     for (i = 0; i < 2; i++) 
     {
         if (corner && !i)
-            printf("\xe2\x94\x9c");
+            add_to_response("\xe2\x94\x9c");
         else if(!i)
-            printf("\xe2\x94\x9c");
+            add_to_response("\xe2\x94\x9c");
         char *line = "\xe2\x94\x80";
-        printf("%s", line);
+        add_to_response("%s", line);
     }
 }
 
@@ -943,23 +943,23 @@ void print_tree(int current_dir_inode, int depth) {
             if (type == 'd') {
                 if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
                     print_space(depth, file_counter);
-                    printf(BOLDBLUE "%s\n" RESET, name);
+                    add_to_response(BOLDBLUE "%s\n" RESET, name);
                     print_tree(temp_inode_offset, depth + 2);
                     file_counter=0;
                 }
             }
             else if (type == 'f') {
                 print_space(depth, file_counter);
-                printf(RESET "%s\n" RESET, name);
+                add_to_response(RESET "%s\n" RESET, name);
                 file_counter=0;
             }
             else if (type == 'l'){
                 print_space(depth, file_counter);
-                printf(CYAN "%s\n" RESET, name); 
+                add_to_response(CYAN "%s\n" RESET, name); 
                 file_counter=0;
             }
             else {
-                fprintf(stderr, "Unknown element type %c\n", type);
+                add_to_response("Unknown element type %c\n", type);
             }
         }
     }
@@ -968,7 +968,7 @@ void print_tree(int current_dir_inode, int depth) {
 
 void get_name(short inode_id, char **name) {
     if(inode_id < 0) {
-        fprintf(stderr, BOLDRED "Invalid inode ID\n" RESET);
+        add_to_response(BOLDRED "Invalid inode ID\n" RESET);
         return;
     }
     int inode_offset = find_inode_offset(inode_id);
@@ -985,7 +985,7 @@ void get_name(short inode_id, char **name) {
 
 char inode_type(short inode_id) {
     if(inode_id < 0) {
-        fprintf(stderr, BOLDRED "Invalid inode ID\n" RESET);
+        add_to_response(BOLDRED "Invalid inode ID\n" RESET);
         return 0;
     }
     int inode_offset = find_inode_offset(inode_id);
@@ -999,7 +999,7 @@ char inode_type(short inode_id) {
 
 short get_link_count(short inode_id) {
     if(inode_id < 0) {
-        fprintf(stderr, BOLDRED "Invalid inode ID\n" RESET);
+        add_to_response(BOLDRED "Invalid inode ID\n" RESET);
         return 0;
     }
     int inode_offset = find_inode_offset(inode_id);
@@ -1017,7 +1017,7 @@ short get_link_count(short inode_id) {
 
 int block_count(short inode_id) {
     if(inode_id < 0) {
-        fprintf(stderr, BOLDRED "Invalid inode ID\n" RESET);
+        add_to_response(BOLDRED "Invalid inode ID\n" RESET);
         return 0;
     }
     int inode_offset = find_inode_offset(inode_id);
@@ -1037,7 +1037,7 @@ int block_count(short inode_id) {
 
 int total_size(short inode_id) {
     if(inode_id < 0) {
-        fprintf(stderr, BOLDRED "Invalid inode ID\n" RESET);
+        add_to_response(BOLDRED "Invalid inode ID\n" RESET);
         return 0;
     }
     int inode_offset = find_inode_offset(inode_id);

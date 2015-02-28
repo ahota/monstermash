@@ -45,6 +45,7 @@
 #define BOLDCYAN             "\033[1m\033[36m"
 #define BOLDWHITE            "\033[1m\033[37m"
 
+
 //Functions
 void get_local_input(char **user_input);
 void get_remote_input(int socket, char **user_input);
