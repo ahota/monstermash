@@ -43,24 +43,26 @@ int main() {
     free(user_input);
     printf(GREEN "Connected!\n" RESET);
 
-    char *server_output = NULL;
-    int output_length = 0;
     while(1) {
         //Wait for output/response from server
-        while(output_length == 0)
-            ioctl(sock_fd, FIONREAD, &output_length);
-        if(server_output != NULL)
-            free(server_output);
-        server_output = malloc(output_length + 1);
-        memset(server_output, 0, output_length + 1);
-        message_length = read(sock_fd, server_output, output_length);
-        if(message_length < 0)
-            fprintf(stderr, BOLDRED "Error reading from socket\n" RESET);
-        else {
-            if(message_length != output_length)
-                fprintf(stderr, YELLOW "Unexpected message length\n" RESET);
-            printf("%s", server_output);
+        //Get header
+        char *header = malloc(INPUT_BUFFER_SIZE);
+        memset(header, 0, INPUT_BUFFER_SIZE);
+        int header_length = read(sock_fd, header, INPUT_BUFFER_SIZE);
+        if(header_length < 0)
+            fprintf(stderr, BOLDRED "Error reading from socket\n");
+        if(header_length < INPUT_BUFFER_SIZE) {
+            fprintf(stderr, YELLOW "DEBUG: Unexpected header size %d\n" RESET,
+                    header_length);
+            fprintf(stderr, YELLOW "DEBUG: Header=%s\n" RESET, header);
         }
+        int response_length = atoi(header);
+        //Get rest of response
+        int i;
+        char *server_output = malloc(response_length + 1);
+        memset(server_output, 0, response_length + 1);
+        int received_length = read(sock_fd, server_output + i, response_length);
+        printf("%s", server_output);
 
         //If the user entered "exit" on the last iteration
         //get server response above and then quit

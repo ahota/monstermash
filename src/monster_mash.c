@@ -615,9 +615,19 @@ void add_to_response(char *format, ...) {
 void respond() {
     if(full_response != NULL) {
         if(server) {
-            int n = write(new_sock_fd, full_response, strlen(full_response));
+            //Generate a header containing the size of the rest of the response
+            int total_length = strlen(full_response);
+            //If the total length is this big, we have problems
+            char *header = malloc(INPUT_BUFFER_SIZE);
+            memset(header, 0, INPUT_BUFFER_SIZE);
+            snprintf(header, INPUT_BUFFER_SIZE, "%d", total_length);
+
+            int n = write(new_sock_fd, header, INPUT_BUFFER_SIZE);
             if(n < 0)
-                printf(YELLOW "Warning: error writing to client\n" RESET);
+                printf(YELLOW "Warning: error sending header\n" RESET);
+            n = write(new_sock_fd, full_response, strlen(full_response));
+            if(n < 0)
+                printf(YELLOW "Warning: error sending response\n" RESET);
         }
         else
             printf("%s", full_response);
