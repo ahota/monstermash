@@ -1,0 +1,91 @@
+\documentclass[]{article}
+	
+\usepackage[T1]{fontenc}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage[margin=1in]{geometry}
+\definecolor{darkgray}{HTML}{333350}
+\definecolor{lightgray}{HTML}{555570}
+\definecolor{body}{HTML}{414955}
+
+% Title Page
+\title{\color{darkgray} Monster Mash \\ \large \color{lightgray} A UNIX-like shell and filesystem }
+\color{lightgray}
+\author{Alok Hota \& Mohammad Raji}
+\renewcommand{\familydefault}{\sfdefault}
+
+\begin{document}
+\maketitle
+
+\pagenumbering{gobble}
+\pagebreak
+\pagenumbering{arabic}
+
+\color{body}
+\section{About}
+Monster Mash is a UNIX-like shell and virtual filesystem. Its name was originally MASH, which stood for Mohammad and Alok's SHell. This name was taken however, so we added the word monster, referencing the hit 1962 single by Bobby Pickett. It supports various simple commands similar to basic UNIX commands. The underlying filesystem is based on UNIX's inodes and data block structure. 
+
+\section{Installation}
+The repository is available on Github (\url{https://github.com/ahota/monstermash}). To build Monster Mash, simply run \texttt{make}. This will create two executables, \texttt{mmash} and \texttt{client}. 
+
+\section{Usage}
+The \texttt{mmash} executable will start the shell and filesystem. The following options are supported:
+
+\begin{itemize}
+	\item -s [port]: Runs \texttt{mmash} as server on [port]. If port is not specified, \texttt{mmash} will default to port 1962 (the year \textit{Monster Mash} was released as a single.)
+	\item -d: Runs \texttt{mmash} in debug mode
+\end{itemize}
+
+\paragraph{}
+Running \texttt{mmash} with no options starts it locally.
+
+\paragraph{}
+The following commands are supported by \texttt{mmash}: 
+
+\begin{itemize}
+	\item mkfs: Formats and (re)generates the filesystem. This is run automatically when starting \texttt{mmash} locally or when a client connects. This creates a root directory (/).
+	
+	\item open \textless filename\textgreater \space \textless r|w|rw\textgreater: Opens a file for reading (r), writing (w) or both (rw) depending on the flag given. If a file is opened with the w or rw flag and does not exist, it will be created. After a file is opened, a file descriptor is printed for later accesses. 
+	
+	\item read \textless fd\textgreater \space \textless size\textgreater: Reads size bytes from an open file with file descriptor fd. 
+	
+	\item write \textless fd\textgreater \space \textless string\textgreater: Writes string to an open file with file descriptor fd. 
+	
+	\item seek \textless fd\textgreater \space \textless offset\textgreater: Seeks to offset (bytes) in file with file descriptor fd. 
+	
+	\item close \textless fd\textgreater: Closes file with file descriptor fd. 
+	
+	\item mkdir \textless name\textgreater: Makes a directory called name in the current directory. The name can have spaces if it's surrounded by quotes.
+	
+	\item rmdir \textless name\textgreater: Removes the directory called name from the current directory. The directory must be empty.
+	
+	\item cd \textless path\textgreater: Changes the current directory to path. Path must be relative and can have spaces if surrounded with quotes. 
+	
+	\item link \textless target\textgreater \space \textless link name\textgreater: Creates a link called link name to target. Paths to link and target can be relative.
+	
+	\item unlink \textless name\textgreater: Unlinks a link called name or deletes a file called name. If the target data has zero links to it, it is deleted. 
+	
+	\item stat \textless name\textgreater: Provides name on disk, inode ID, type, number of links, blocks allocated and the total data size of element called name. 
+	
+	\item ls: Lists all elements in the current directory. 
+	
+	\item cat \textless name\textgreater: Prints the contents of the file called name. 
+	
+	\item cp \textless src\textgreater \space \textless dest\textgreater: Copies the file or link called src to a new file or link called dest. src and dest can be relative paths with spaces if surrounded by quotes
+	
+	\item tree: Lists the contents of all directories hierarchically from the current directory along with their total file size.
+	
+	\item import \textless src\textgreater \space \textless dest\textgreater: Imports a file called src from the host to a file called dest on the \texttt{mmash} filesystem. 
+	
+	\item export \textless src\textgreater \space \textless dest\textgreater: Exports a file called src from \texttt{mmash} to the host filesystem as dest. 
+\end{itemize}
+
+\section{Architecture}
+
+\section{Limitations}
+
+Currently \texttt{mmash} supports 1024 inodes as a maximum. This means there cannot be more than 1024 elements on the filesystem, including the root directory. The total inode table size is 8KB. The disk itself is 100MB total, less the inode table and block meta-data size, leaves 99.06\% of the disk for data. 
+
+In the current version, the filesystem is not persistent across runs and is erased every time \texttt{mmash} is started. 
+
+\end{document}          
