@@ -14,7 +14,7 @@ char *full_response;
 int response_length;
 int response_offset;
 
-int verbose = 1;
+int verbose = 0;
 //socket file descriptors and port
 int sock_fd, new_sock_fd, port;
 //Length of client address
@@ -37,6 +37,12 @@ int main(int argc, char **argv) {
                 port = atoi(argv[2]);
             else
                 port = 1962; //year "Monster Mash" was released as a single
+        }
+        int i;
+        for (i = 0; i < argc; i++) {
+            if (strcmp(argv[i], "-d") || strcmp(argv[i], "--debug")) {
+                verbose = 1;
+            }
         }
     }
 
@@ -120,7 +126,7 @@ int main(int argc, char **argv) {
         else
             get_local_input(&user_input);
 
-        printf(YELLOW "DEBUG: %s" RESET, user_input);
+        wlog(YELLOW "DEBUG: %s" RESET, user_input);
         int input_length = strlen(user_input);
         if(server && input_length == 0) {
             printf(YELLOW "Client disconnected\n" RESET);
@@ -227,7 +233,7 @@ void parse_input(char *input, int input_length) {
         tree();
     }
     else if(strcmp(command, "stat") == 0) { //                              STAT
-        stat_mm(strtok(NULL, "\n"));
+        stat_mm(strtok(NULL, "\n"), 0);
     }
     else if(strcmp(command, "exit") == 0) { //                              EXIT
         //Write to socket before closing
@@ -533,10 +539,10 @@ void cat(char *name) {
     file_flag[len] = ' ';
     file_flag[len + 1] = 'r';
     file_flag[len + 2] = '\n';
-    int fd = open(file_flag);
+    int fd = open_mm(file_flag);
     if (fd != -1) {
-        read(DISK_SIZE, fd);
-        close(name);    
+        read_mm(DISK_SIZE, fd);
+        close_mm(name);    
     }
 }
 
@@ -664,7 +670,7 @@ void tree() {
     print_tree(current_dir_inode, 0);
 }
 
-void stat_mm(char *name) {
+void stat_mm(char *name, int simple_format) {
     int start, end;
     trim_whitespace(name, &start, &end);
     
@@ -702,22 +708,29 @@ void stat_mm(char *name) {
     char *block_name;
     get_name((short)inode_id, &block_name);
 
-    printf("Name on disk     | %s\n", block_name);
-    printf("inode ID         | %d\n", inode_id);
+    if (!simple_format) {
+        printf("Name on disk     | %s\n", block_name);
+    }
+    else {
+        printf("Name on disk    %s ", block_name);
+    }
+    if (!simple_format) {
+        printf("inode ID         | %d\n", inode_id);
 
-    char type = inode_type((short)inode_id);
-    printf("Type             | ");
-    if(type == 'd')
-        printf("directory\n");
-    else if(type == 'f')
-        printf("file\n");
-    else if(type == 'l')
-        printf("link\n");
-    else
-        printf("unknown\n");
+        char type = inode_type((short)inode_id);
+        printf("Type             | ");
+        if(type == 'd')
+            printf("directory\n");
+        else if(type == 'f')
+            printf("file\n");
+        else if(type == 'l')
+            printf("link\n");
+        else
+            printf("unknown\n");
 
-    printf("Number of links  | %d\n",   get_link_count((short)inode_id));
-    printf("Blocks allocated | %d\n",   block_count((short)inode_id));
+        printf("Number of links  | %d\n",   get_link_count((short)inode_id));
+        printf("Blocks allocated | %d\n",   block_count((short)inode_id));
+    }
 
     //Get total size of this file/dir
     float size = total_size((short)inode_id);
@@ -730,14 +743,18 @@ void stat_mm(char *name) {
     //Smart print size
     printf("Total size       | ");
     if(magnitude == 0)
-        printf("%d B\n", (int)size);
+        printf("%d B", (int)size);
     else if(magnitude == 1)
-        printf("%.1f kB\n", size);
+        printf("%.1f kB", size);
     else if(magnitude == 2)
-        printf("%.1f MB\n", size);
+        printf("%.1f MB", size);
     else
-        printf("%.1f ?B\n", size);
+        printf("%.1f ?B", size);
 
+    //if (!simple_format) 
+    {
+        printf("\n");
+    }
 }
 
 

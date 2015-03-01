@@ -70,4 +70,4 @@ void respond();
 void add_to_response(char *format, ...);
 void cp(char *dest, char *src);
 void tree();
-void stat_mm(char *name);
+void stat_mm(char *name, int simple_format);

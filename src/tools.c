@@ -264,6 +264,7 @@ int remove_entry(int block_offset, char *name) {
         //Found it
         if(strcmp(temp_name, name) == 0) {
             wipe(disk, block_offset + METADATA_SIZE + i, DIR_TABLE_ENTRY_SIZE);
+            commit_disk(disk);
             return 0;
         }
     }
@@ -577,13 +578,15 @@ void link_create(char *name, char *src,
     int data_block_offset;
     fread(&data_block_offset, sizeof(int), 1, disk);
     fseek(disk, data_block_offset + METADATA_SIZE, SEEK_SET);
-    fwrite(&src_inode_id, sizeof(int), 1, disk);
-
+    wlog("%d\n", data_block_offset + METADATA_SIZE);
+    int ret = fwrite(&src_inode_id, sizeof(int), 1, disk);
+    wlog("Wrote %d\n", ret);
     increment_link(src_inode_offset);
 
     if(strcmp(link_parent, ".") != 0) {
         free(link_parent);
     }
+    commit_disk(disk);
 }
 
 void increment_link(int target_inode_offset) {
@@ -656,6 +659,7 @@ void link_remove(char *name, short *inode_counter, int *current_dir_inode) {
     else {
         add_to_response(BOLDRED "Cannot unlink directories.\n" RESET);
     }
+    commit_disk(disk);
     return;
 }
 
@@ -664,11 +668,11 @@ void remove_file_from_dir(FILE *disk, int parent_offset, int inode_id) {
     int parent_data_block_offset;
     fread(&parent_data_block_offset, sizeof(int), 1, disk);
     int i;
-    for (i = 0; i < 4058; i += DIR_TABLE_ENTRY_SIZE) {
+    for (i = 0; i < BLOCK_SIZE - METADATA_SIZE; i += DIR_TABLE_ENTRY_SIZE) {
         fseek(disk, parent_data_block_offset + METADATA_SIZE + i, SEEK_SET);
         int temp_id;
         fread(&temp_id, sizeof(int), 1, disk);
-        wlog("temp_id: %d\tinode_id: %d\n", temp_id, inode_id);
+        //wlog("temp_id: %d\tinode_id: %d\n", temp_id, inode_id);
         if (temp_id == inode_id) {
             wipe(disk, parent_data_block_offset + METADATA_SIZE + i,
                     DIR_TABLE_ENTRY_SIZE);//phew
@@ -940,6 +944,7 @@ void print_tree(int current_dir_inode, int depth) {
             fseek(disk,temp_inode_offset, SEEK_SET);
             char type = 0;
             fread(&type, sizeof(char), 1, disk);
+
             if (type == 'd') {
                 if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
                     print_space(depth, file_counter);
