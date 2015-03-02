@@ -708,29 +708,22 @@ void stat_mm(char *name, int simple_format) {
     char *block_name;
     get_name((short)inode_id, &block_name);
 
-    if (!simple_format) {
-        printf("Name on disk     | %s\n", block_name);
-    }
-    else {
-        printf("Name on disk    %s ", block_name);
-    }
-    if (!simple_format) {
-        printf("inode ID         | %d\n", inode_id);
+    printf("Name on disk     | %s\n", block_name);
+    printf("inode ID         | %d\n", inode_id);
 
-        char type = inode_type((short)inode_id);
-        printf("Type             | ");
-        if(type == 'd')
-            printf("directory\n");
-        else if(type == 'f')
-            printf("file\n");
-        else if(type == 'l')
-            printf("link\n");
-        else
-            printf("unknown\n");
+    char type = inode_type((short)inode_id);
+    printf("Type             | ");
+    if(type == 'd')
+        printf("directory\n");
+    else if(type == 'f')
+        printf("file\n");
+    else if(type == 'l')
+        printf("link\n");
+    else
+        printf("unknown\n");
 
-        printf("Number of links  | %d\n",   get_link_count((short)inode_id));
-        printf("Blocks allocated | %d\n",   block_count((short)inode_id));
-    }
+    printf("Number of links  | %d\n",   get_link_count((short)inode_id));
+    printf("Blocks allocated | %d\n",   block_count((short)inode_id));
 
     //Get total size of this file/dir
     float size = total_size((short)inode_id);
@@ -750,13 +743,7 @@ void stat_mm(char *name, int simple_format) {
         printf("%.1f MB", size);
     else
         printf("%.1f ?B", size);
-
-    //if (!simple_format) 
-    {
-        printf("\n");
-    }
 }
-
 
 
 

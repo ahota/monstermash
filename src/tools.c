@@ -945,6 +945,17 @@ void print_tree(int current_dir_inode, int depth) {
             char type = 0;
             fread(&type, sizeof(char), 1, disk);
 
+            //Get the size of the element
+            float my_size = total_size((short) temp_inode_id);
+            char magnitude = 0;
+            int i;
+
+            while(my_size > BLOCK_SIZE * 2) {
+                my_size /= 1024;
+                magnitude++;
+            }
+
+            
             if (type == 'd') {
                 if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
                     print_space(depth, file_counter);
@@ -955,7 +966,18 @@ void print_tree(int current_dir_inode, int depth) {
             }
             else if (type == 'f') {
                 print_space(depth, file_counter);
-                add_to_response(RESET "%s\n" RESET, name);
+                //lol why does this have two RESETs
+                add_to_response(RESET "%s" RESET, name);
+                add_to_response(" " MAGENTA);
+                if(magnitude == 0)
+                    add_to_response("%d B\n", (int)my_size);
+                else if(magnitude == 1)
+                    add_to_response("%.1f kB\n", my_size);
+                else if(magnitude == 2)
+                    add_to_response("%.1f MB\n", my_size);
+                else
+                    add_to_response("%.1f ?B\n", my_size);
+                add_to_response(RESET);
                 file_counter=0;
             }
             else if (type == 'l'){
