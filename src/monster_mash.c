@@ -212,7 +212,7 @@ void parse_input(char *input, int input_length) {
         read_mm(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "link") == 0) { //                              LINK
-        link(strtok(NULL, "\n");
+        link(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "unlink") == 0) { //                          UNLINK
         unlink(strtok(NULL, " \n"));
@@ -224,7 +224,7 @@ void parse_input(char *input, int input_length) {
         import(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "export") == 0) { //                          EXPORT
-        export(strtok(NULL, " \n"), strtok(NULL, " \n"));
+        export(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "cp") == 0) { //                                  CP
         cp(strtok(NULL, " \n"), strtok(NULL, " \n"));
@@ -566,10 +566,21 @@ void read_mm(char *fd_size) {
     }   
 }
 
-void link(char *dest, char *src) {
+void link(char *src_dest) {
     //Check to see if file dest already exists 
     //Check to see if src exists
     //Create new link
+    if(src_dest == NULL || strlen(src_dest) == 0) {
+        add_to_response(BOLDRED "No arguments provided\n" RESET);
+        return;
+    }
+    char *src = strtok(src_dest, " \n");
+    char *dest = strtok(NULL, "\n");
+    if(dest == NULL || strlen(dest) == 0) {
+        add_to_response(BOLDRED "No destination provided\n" RESET);
+        return;
+    }
+
     link_create(dest, src, &inode_counter, &current_dir_inode);
 }
 
@@ -595,6 +606,11 @@ void cat(char *name) {
 }
 
 void import(char *input) {
+    if(input == NULL || strlen(input) == 0) {
+        add_to_response(BOLDRED "No arguments provided\n" RESET);
+        return;
+    }
+
     char *dest_name, *host_name;
     smart_split(input, &dest_name, &host_name);
     if(dest_name == NULL || strlen(dest_name) == 0) {
@@ -636,7 +652,27 @@ void import(char *input) {
 
 }
 
-void export(char *host_path, char *name) {
+void export(char *input) {
+    if(input == NULL || strlen(input) == 0) {
+        add_to_response(BOLDRED "No arguments provided\n" RESET);
+        return;
+    }
+
+    char *name, *host_path;
+    smart_split(input, &name, &host_path);
+    if(name == NULL || strlen(name) == 0) {
+        add_to_response(BOLDRED "Invalid file name\n" RESET);
+        return;
+    }
+    if(host_path == NULL || strlen(host_path) == 0) {
+        add_to_response(BOLDRED "Invalid host file name\n" RESET);
+        return;
+    }
+    if(strchr(name, '/') != NULL) {
+        add_to_response(BOLDRED "Invalid destination file name\n" RESET);
+        return;
+    }
+
     FILE *temp_stdout = stdout;
     verbose = 0;
     stdout = fopen(host_path, "w+");
