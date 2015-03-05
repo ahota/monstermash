@@ -81,6 +81,36 @@ The following commands are supported by \texttt{mmash}:
 \end{itemize}
 
 \section{Architecture}
+The Monster Mash filesystem is based on concepts from a typical UNIX filesystem.
+
+\subsection{inodes}
+The filesystem uses inodes to keep a record of elements. Each element, whether it is a file, directory, or link, has one inode. Each inode is 8 bytes in size and has the following structure:
+
+\begin{table}[h]
+	\begin{tabular}{llll}
+		Type  & Name         & Size & Purpose                                              \\ \hline
+		char  & type         & 1    & Type of element: 'f', 'd', or 'l'                    \\
+		short & id           & 2    & Unique ID for this inode                             \\
+		int   & first\_block & 4    & Offset to the first block allocated for this element \\
+		char  & pad          & 1    & Padding to reach 8 bytes                            
+	\end{tabular}
+\end{table}
+
+The inode table supports up to 1024 inodes. Since each is 8 bytes, this means the inode table occupies only 8 kB of the disk.
+
+\subsection{Data Blocks}
+The first data block begins immediately after the inode table. Blocks are 4096 bytes each and have the following structure:
+
+\begin{table}[h]
+	\begin{tabular}{llll}
+		Type   & Name        & Size & Purpose                                 \\ \hline
+		char * & name        & 32   & The name of this element or 'CONTINUED' \\
+		int    & next\_block & 32   & Byte offset to next block or -1         \\
+		short  & link\_count & 2    & Number of links to this element         \\
+		char * & data        & 4058 & Contents of this element               
+	\end{tabular}
+\end{table}
+
 
 \section{Limitations}
 
