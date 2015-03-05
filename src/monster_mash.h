@@ -5,8 +5,9 @@
 #include<sys/stat.h>
 #include<time.h>
 #include<stdarg.h>
-#include<error.h>
 #include<unistd.h>
+#include<error.h>
+#include<errno.h>
 
 //For server puposes
 #include<sys/types.h>

@@ -13,7 +13,7 @@ int main() {
 
     //get server address
     char *user_input = malloc(INPUT_BUFFER_SIZE);
-    printf("Server address: ");
+    printf("Server address : ");
     get_local_input(&user_input);
     server = gethostbyname(user_input);
     if(server == NULL) {
@@ -22,7 +22,7 @@ int main() {
     }
 
     //get port number
-    printf("Port          : ");
+    printf("Port           : ");
     free(user_input);
     //really no need for it to be this big
     user_input = malloc(INPUT_BUFFER_SIZE);
@@ -34,9 +34,11 @@ int main() {
     server_address.sin_family = AF_INET;
     memcpy(server->h_addr, &(server_address.sin_addr.s_addr), server->h_length);
     server_address.sin_port = htons(port);
+    int err;
     if(connect(sock_fd, (struct sockaddr *) &server_address,
                sizeof(server_address)) < 0) {
-        fprintf(stderr, BOLDRED "Could not connect\n" RESET);
+        err = errno;
+        fprintf(stderr, BOLDRED "Could not connecti, error=%d\n" RESET, err);
         exit(1);
     }
 
