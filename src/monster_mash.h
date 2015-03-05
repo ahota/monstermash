@@ -6,6 +6,7 @@
 #include<time.h>
 #include<stdarg.h>
 #include<error.h>
+#include<unistd.h>
 
 //For server puposes
 #include<sys/types.h>
@@ -45,7 +46,8 @@
 #define BOLDCYAN             "\033[1m\033[36m"
 #define BOLDWHITE            "\033[1m\033[37m"
 
-
+//Globals, eww!
+int force_printf; // For forcing read_data to printf instead of doing add_response.
 //Functions
 void get_local_input(char **user_input);
 void get_remote_input(int socket, char **user_input);
@@ -54,20 +56,21 @@ void mkfs();
 void make_dir(char* dir_name);
 void ls();
 void cd(char *dir_name);
-void rmdir(char *dir_name);
+void rmdir_mm(char *dir_name);
 int  open_mm(char *file_flag);
-void close_mm(char *name);
+void close_mm(char *fdt);
+void close_by_name(char *name);
 void write_mm(char *fd_text);
 void seek_mm(char *fd_offset);
 void read_mm(char *fd_size);
-void link(char *src_dest);
-void unlink(char *link_name);
+void link_mm(char *src_dest);
+void unlink_mm(char *link_name);
 void cat(char *file_name);
 void import(char *input);
 void export(char *input);
 void wlog(char *format, ...);
 void respond();
 void add_to_response(char *format, ...);
-void cp(char *dest, char *src);
+void cp(char *src_dest);
 void tree();
 void stat_mm(char *name, int simple_format);

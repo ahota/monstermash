@@ -1,0 +1,111 @@
+They did the Monster Mash!
+Making filesystem...[32mDone
+[0m
+[1m[32mmonster@test:[0m/ $ Making filesystem...[32mDone
+[0m
+[1m[35mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ Making filesystem...[32mDone
+[0m
+[1m[33mmonster@test:[0m/ $ 
+[1m[33mmonster@test:[0m/ $ Making filesystem...[32mDone
+[0m
+[1m[34mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ Making filesystem...[32mDone
+[0m
+[1m[32mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ Making filesystem...[32mDone
+[0m
+[1m[36mmonster@test:[0m/ $ 
+[1m[36mmonster@test:[0m/ $ Opened with file descriptor [32m1
+[0m
+[1m[33mmonster@test:[0m/ $ 
+[1m[36mmonster@test:[0m/ $ [1m[31mFile is already open with file descriptor 1
+[0mOpened with file descriptor [32m1
+[0m
+[1m[36mmonster@test:[0m/ $ 
+[1m[33mmonster@test:[0m/ $ [1m[31mMust provide file access flag: 'r', 'w', or 'rw'
+[0m
+[1m[33mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ [1m[31mInvalid flag. Must be one of 'r','w', or 'rw'
+[0m
+[1m[33mmonster@test:[0m/ $ 
+[1m[32mmonster@test:[0m/ $ [1m[31mInvalid flag. Must be one of 'r','w', or 'rw'
+[0m
+[1m[33mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ [1m[31mMust provide file access flag: 'r', 'w', or 'rw'
+[0m
+[1m[35mmonster@test:[0m/ $ 
+[1m[32mmonster@test:[0m/ $ 
+[1m[36mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ 
+[1m[32mmonster@test:[0m/ $ [1m[31mInvalid command "i7lki67ykykyti"
+[0m
+[1m[34mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ This is a test
+
+[1m[36mmonster@test:[0m/ $ 
+[1m[36mmonster@test:[0m/ $ [1m[34m.                                [0m[0mfile                             [0m
+
+
+[1m[32mmonster@test:[0m/ $ 
+[1m[34mmonster@test:[0m/ $ [0mfile[0m [35m13 B
+[0m
+[1m[34mmonster@test:[0m/ $ 
+[1m[33mmonster@test:[0m/ $ Name on disk     | file
+inode ID         | 1
+Type             | file
+Number of links  | 1
+Blocks allocated | 1
+Total size       | 13 B
+
+[1m[32mmonster@test:[0m/ $ 
+[1m[33mmonster@test:[0m/ $ Opened with file descriptor [32m1
+[0m
+[1m[33mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ 
+[1m[36mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ is a test
+
+[1m[34mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ 
+[1m[34mmonster@test:[0m/ $ 
+[1m[33mmonster@test:[0m/ $ This is a test
+
+[1m[33mmonster@test:[0m/ $ 
+[1m[32mmonster@test:[0m/ $ 
+[1m[32mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ 
+
+[1m[35mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ 
+[1m[33mmonster@test:[0m/ $ 
+
+[1m[35mmonster@test:[0m/ $ 
+[1m[36mmonster@test:[0m/ $ 
+[1m[32mmonster@test:[0m/ $ 
+[1m[33mmonster@test:[0m/ $ [1m[31mInvalid file argument
+[0m
+[1m[36mmonster@test:[0m/ $ 
+[1m[36mmonster@test:[0m/ $ [1m[31mInvalid file argument
+[0m
+[1m[33mmonster@test:[0m/ $ 
+[1m[36mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ [33mIgnoring arguments after space
+[0m[1m[31mDirectory named "test" already exists
+[0m
+[1m[35mmonster@test:[0m/ $ 
+[1m[34mmonster@test:[0m/ $ 
+[1m[32mmonster@test:[0m/ $ 
+[1m[33mmonster@test:[0m/ $ [1m[31mDirectory named ""test"" already exists
+[0m
+[1m[36mmonster@test:[0m/ $ 
+[1m[35mmonster@test:[0m/ $ 
+[1m[36mmonster@test:[0mtest test $ 
+[1m[32mmonster@test:[0mtest test $ 
+[1m[33mmonster@test:[0m/ $ 
+[1m[33mmonster@test:[0m/ $ 
+[1m[32mmonster@test:[0mtest test $ 
+[1m[33mmonster@test:[0mtest test $ Bye!

@@ -1,6 +1,7 @@
 #include "monster_mash.h"
 
 //Globals
+int force_printf = 0;
 short inode_counter = 0; //Used to generate inode IDs
 int current_dir_inode = 0; //Offset of the current directory's inode
 int n_open_files = 0;
@@ -116,9 +117,10 @@ int main(int argc, char **argv) {
 
     while(1) {
         char *user_input = malloc(INPUT_BUFFER_SIZE);
-    
         add_to_response("%s%s%s%s $ ", prompt_colors[rand()%5],
                 prompt, RESET, path);
+        if (!isatty(0))
+            add_to_response("\n");
         respond();
 
         if(server)
@@ -192,7 +194,7 @@ void parse_input(char *input, int input_length) {
         cd(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "rmdir") == 0) { //                            RMDIR
-        rmdir(strtok(NULL, " \n"));
+        rmdir_mm(strtok(NULL, " \n"));
     }
     else if(strcmp(command, "open") == 0) { //                              OPEN
         int fd = open_mm(strtok(NULL, "\n"));
@@ -212,10 +214,10 @@ void parse_input(char *input, int input_length) {
         read_mm(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "link") == 0) { //                              LINK
-        link(strtok(NULL, "\n"));
+        link_mm(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "unlink") == 0) { //                          UNLINK
-        unlink(strtok(NULL, " \n"));
+        unlink_mm(strtok(NULL, " \n"));
     }
     else if(strcmp(command, "cat") == 0) { //                                CAT
         cat(strtok(NULL, "\n"));
@@ -227,7 +229,7 @@ void parse_input(char *input, int input_length) {
         export(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "cp") == 0) { //                                  CP
-        cp(strtok(NULL, " \n"), strtok(NULL, " \n"));
+        cp(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "tree") == 0) { //                              TREE
         tree();
@@ -252,7 +254,15 @@ void parse_input(char *input, int input_length) {
 }
 
 void mkfs() {    
+    inode_counter = 0; //Used to generate inode IDs
+    current_dir_inode = 0; //Offset of the current directory's inode
+    n_open_files = 0;
+    int i;
+    for(i = 0; i < MAX_OPEN_FILES * 3; i++) {
+        open_files[i] = 0;
+    }
     mkdir("../fs", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    
     add_to_response("Making filesystem...");
     current_dir_inode = disk_create(&inode_counter);
     update_prompt(current_dir_inode, path);
@@ -337,7 +347,7 @@ void cd(char *name) {
     update_prompt(current_dir_inode, path);
 }
 
-void rmdir(char *name) {
+void rmdir_mm(char *name) {
     if(name == NULL || strlen(name) == 0) {
         add_to_response(BOLDRED "Invalid argument\n" RESET);
         return;
@@ -415,9 +425,9 @@ int open_mm(char *file_flag) {
     return fd;
 }
 
-void close_mm(char *name) {
+void close_by_name(char *name) {
     if(name == NULL || strlen(name) == 0) {
-        add_to_response(BOLDRED "Invalid argument\n" RESET);
+        add_to_response(BOLDRED "No argument provided\n" RESET);
         return;
     }
     //name may have leading/trailing white space
@@ -440,9 +450,23 @@ void close_mm(char *name) {
         if(strtok(NULL, " \n") != NULL)
             add_to_response(BOLDYELLOW "Ignoring argument past space\n" RESET);
     }
-
     //Check if file exists
     int fd = file_exists(trimmed, &current_dir_inode, 0);
+    char *fdt = malloc(5);
+    memset(fdt, 0, 5);
+    snprintf(fdt, 5, "%d", fd);
+    close_mm(fdt);
+}
+
+void close_mm(char *fdt) {
+    if(fdt == NULL || strlen(fdt) == 0) {
+        add_to_response(BOLDRED "No argument provided\n" RESET);
+        return;
+    }
+    int fd = atoi(fdt);
+
+    //Check if file exists
+    //int fd = file_exists(trimmed, &current_dir_inode, 0);
     if(fd == -1) {
         add_to_response(BOLDRED "Invalid file argument\n" RESET);
         return;
@@ -457,7 +481,7 @@ void close_mm(char *name) {
             open_files[i+1] = 0;
             open_files[i+2] = 0;
             n_open_files--;
-            wlog("Closed file %s (fd = %d)\n", trimmed, fd);
+            wlog("Closed file (fd = %d)\n", fd);
             return;
         }
     }
@@ -566,7 +590,7 @@ void read_mm(char *fd_size) {
     }   
 }
 
-void link(char *src_dest) {
+void link_mm(char *src_dest) {
     //Check to see if file dest already exists 
     //Check to see if src exists
     //Create new link
@@ -584,7 +608,7 @@ void link(char *src_dest) {
     link_create(dest, src, &inode_counter, &current_dir_inode);
 }
 
-void unlink(char *name) {
+void unlink_mm(char *name) {
     link_remove(name, &inode_counter, &current_dir_inode);
 }
 
@@ -612,7 +636,7 @@ void import(char *input) {
     }
 
     char *dest_name, *host_name;
-    smart_split(input, &dest_name, &host_name);
+    smart_split(input, &host_name, &dest_name);
     if(dest_name == NULL || strlen(dest_name) == 0) {
         add_to_response(BOLDRED "Invalid destination file name\n" RESET);
         return;
@@ -635,7 +659,8 @@ void import(char *input) {
     file_flag[len + 2] = '\n';
 
     char buffer[1024];
-    int fd = open(file_flag);
+    memset(buffer, 0, 1024);
+    int fd = open_mm(file_flag);
     if (fd != -1) {
         FILE *hfile = fopen(host_name, "r");
         while(fgets(buffer, sizeof(buffer), hfile) != NULL) {
@@ -643,11 +668,13 @@ void import(char *input) {
             memset(fdt, 0, 5);
             snprintf(fdt, 5, "%d", fd);
             char *fd_buffer = malloc(strlen(fdt) + strlen(buffer) + 1);
+            memset(fd_buffer, 0, strlen(fdt) + strlen(buffer) + 1);
             strcpy(fd_buffer, fdt);
+            fd_buffer[strlen(fdt)] = ' ';
             strcat(fd_buffer, buffer);
             write_mm(fd_buffer);
         }
-        close(dest_name);
+        close_mm(dest_name);
     }
 
 }
@@ -676,9 +703,10 @@ void export(char *input) {
     FILE *temp_stdout = stdout;
     verbose = 0;
     stdout = fopen(host_path, "w+");
+    force_printf = 1;
     cat(name);
+    force_printf = 0;
     fclose(stdout);
-    verbose = 1;
     stdout = temp_stdout;
 }
 
@@ -732,13 +760,23 @@ void respond() {
     }
 }
 
-void cp(char *dest, char *src) {
-    verbose = 0;
+void cp(char *src_dest) {
+    if(src_dest == NULL || strlen(src_dest) == 0) {
+        add_to_response(BOLDRED "No arguments provided\n" RESET);
+        return;
+    }
+    char *src = strtok(src_dest, " \n");
+    char *dest = strtok(NULL, "\n");
+    if(dest == NULL || strlen(dest) == 0) {
+        add_to_response(BOLDRED "No destination provided\n" RESET);
+        return;
+    }
     int current_dir = current_dir_inode;
     int src_fd = find_inode_id(expand_path(src, &current_dir_inode, 0));
     char *dest_parent, *dest_name;
     get_parent_path(dest, &dest_parent);
     get_filename(dest, &dest_name);
+
     cd(dest_parent);
 
     //Open a file as destination
@@ -748,12 +786,12 @@ void cp(char *dest, char *src) {
     file_flag[len] = ' ';
     file_flag[len + 1] = 'w';
     file_flag[len + 2] = '\n';
-    int dest_fd = open(file_flag);
-    printf("%d-%d\n", src_fd, dest_fd);
+    wlog("%s\n", file_flag);
+    int dest_fd = open_mm(file_flag);
     copy_data(src_fd, 0, DISK_SIZE, dest_fd);
-    close(dest_name);
+    close_mm(dest_name);
     current_dir_inode = current_dir;
-    verbose = 1;
+    update_prompt(current_dir_inode, path);
 }
 
 void tree() {
@@ -798,22 +836,22 @@ void stat_mm(char *name, int simple_format) {
     char *block_name;
     get_name((short)inode_id, &block_name);
 
-    printf("Name on disk     | %s\n", block_name);
-    printf("inode ID         | %d\n", inode_id);
+    add_to_response("Name on disk     | %s\n", block_name);
+    add_to_response("inode ID         | %d\n", inode_id);
 
     char type = inode_type((short)inode_id);
-    printf("Type             | ");
+    add_to_response("Type             | ");
     if(type == 'd')
-        printf("directory\n");
+        add_to_response("directory\n");
     else if(type == 'f')
-        printf("file\n");
+        add_to_response("file\n");
     else if(type == 'l')
-        printf("link\n");
+        add_to_response("link\n");
     else
-        printf("unknown\n");
+        add_to_response("unknown\n");
 
-    printf("Number of links  | %d\n",   get_link_count((short)inode_id));
-    printf("Blocks allocated | %d\n",   block_count((short)inode_id));
+    add_to_response("Number of links  | %d\n",   get_link_count((short)inode_id));
+    add_to_response("Blocks allocated | %d\n",   block_count((short)inode_id));
 
     //Get total size of this file/dir
     float size = total_size((short)inode_id);
@@ -824,15 +862,16 @@ void stat_mm(char *name, int simple_format) {
     }
 
     //Smart print size
-    printf("Total size       | ");
+    add_to_response("Total size       | ");
     if(magnitude == 0)
-        printf("%d B", (int)size);
+        add_to_response("%d B", (int)size);
     else if(magnitude == 1)
-        printf("%.1f kB", size);
+        add_to_response("%.1f kB", size);
     else if(magnitude == 2)
-        printf("%.1f MB", size);
+        add_to_response("%.1f MB", size);
     else
-        printf("%.1f ?B", size);
+        add_to_response("%.1f ?B", size);
+    add_to_response("\n");
 }
 
 

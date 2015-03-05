@@ -770,7 +770,11 @@ void read_data(int fd, int file_offset, int size) {
     char *text = malloc(this_block_text + 1);
     fread(text, sizeof(char), this_block_text, disk);
     text[this_block_text] = '\0';
-    add_to_response("%s", text);
+    if (!force_printf)
+        add_to_response("%s", text);
+    else 
+        printf("%s", text);
+
     free(text);
 
     if (size > this_block_text) {
@@ -785,7 +789,10 @@ void read_data(int fd, int file_offset, int size) {
         }
     }
     commit_disk(disk);
-    add_to_response("\n");
+    if (!force_printf)
+        add_to_response("\n");
+    else
+        printf("\n");
 }
 
 int expand_path(char *path, int *current_dir_inode, int shallow) {
@@ -881,7 +888,17 @@ void copy_data(int fd, int file_offset, int size, int dest_fd) {
     char *text = malloc(this_block_text + 1);
     fread(text, sizeof(char), this_block_text, disk);
     text[this_block_text] = '\0';
-    write(text, dest_fd);
+            
+    char *fdt = malloc(5);
+    memset(fdt, 0, 5);
+    snprintf(fdt, 5, "%d", dest_fd);
+    char *fd_buffer = malloc(strlen(fdt) + strlen(text) + 1);
+    memset(fd_buffer, 0, strlen(fdt) + strlen(text) + 1);
+    strcpy(fd_buffer, fdt);
+    fd_buffer[strlen(fdt)] = ' ';
+    strcat(fd_buffer, text);
+    write_mm(fd_buffer);
+    
     free(text);
 
     if (size > this_block_text) {
