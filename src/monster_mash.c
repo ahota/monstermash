@@ -203,16 +203,16 @@ void parse_input(char *input, int input_length) {
         close_mm(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "write") == 0) { //                            WRITE
-        write_mm(strtok(NULL, "\n"), atoi(strtok(NULL, " \n")));
+        write_mm(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "seek") == 0) { //                              SEEK
-        seek_mm(atoi(strtok(NULL, " \n")), atoi(strtok(NULL, " \n")));
+        seek_mm(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "read") == 0) { //                              READ
-        read_mm(atoi(strtok(NULL, " \n")), atoi(strtok(NULL, " \n")));
+        read_mm(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "link") == 0) { //                              LINK
-        link(strtok(NULL, " \n"), strtok(NULL, " \n"));
+        link(strtok(NULL, "\n");
     }
     else if(strcmp(command, "unlink") == 0) { //                          UNLINK
         unlink(strtok(NULL, " \n"));
@@ -338,11 +338,19 @@ void cd(char *name) {
 }
 
 void rmdir(char *name) {
+    if(name == NULL || strlen(name) == 0) {
+        add_to_response(BOLDRED "Invalid argument\n" RESET);
+        return;
+    }
     directory_remove(name, &current_dir_inode);
 }
 
 int open_mm(char *file_flag) {
     //Input has filename (potentially with spaces) and flag
+    if(file_flag == NULL || strlen(file_flag) == 0) {
+        add_to_response(BOLDRED "Invalid argument\n" RESET);
+        return -1;
+    }
     char *name, *flag;
     smart_split(file_flag, &name, &flag);
     if(name == NULL || strlen(name) == 0) {
@@ -408,6 +416,10 @@ int open_mm(char *file_flag) {
 }
 
 void close_mm(char *name) {
+    if(name == NULL || strlen(name) == 0) {
+        add_to_response(BOLDRED "Invalid argument\n" RESET);
+        return;
+    }
     //name may have leading/trailing white space
     int start, end;
     char *trimmed;
@@ -452,8 +464,17 @@ void close_mm(char *name) {
     add_to_response(BOLDRED "File not found\n" RESET);
 }
 
-void write_mm(char *text, int fd) {
-   /*
+void write_mm(char *text_fd) {
+    if(text_fd == NULL || strlen(text_fd) == 0) {
+        add_to_response(BOLDRED "Invalid argument\n" RESET);
+        return;
+    }
+    int fd = atoi(strtok(text_fd, " \n"));
+    char *text = strtok(NULL, "\n");
+    if(text == NULL || strlen(text) == 0) {
+        return;
+    }
+    /*
     Check to see if file is open
     If it's not:
         error
@@ -484,7 +505,19 @@ void write_mm(char *text, int fd) {
        
 }
 
-void seek_mm(int offset, int fd) {
+void seek_mm(char *fd_offset) {
+    if(fd_offset == NULL || strlen(fd_offset) == 0) {
+        add_to_response(BOLDRED "No arguments provided\n" RESET);
+        return;
+    }
+    int fd = atoi(strtok(fd_offset, " \n"));
+    char *offset_s = strtok(NULL, "\n");
+    if(offset_s == NULL || strlen(offset_s) == 0) {
+        add_to_response(BOLDRED "Invalid offset\n" RESET);
+        return;
+    }
+    int offset = atoi(offset_s);
+
     int i;
     for (i = 0; i < MAX_OPEN_FILES * 3; i += 3) {
         if (open_files[i] == fd) {
@@ -496,7 +529,19 @@ void seek_mm(int offset, int fd) {
     }
 }
 
-void read_mm(int size, int fd) {
+void read_mm(char *fd_size) {
+    if(fd_size == NULL || strlen(fd_size) == 0) {
+        add_to_response(BOLDRED "No arguments provided\n" RESET);
+        return;
+    }
+    int fd = atoi(strtok(fd_size, " \n"));
+    char *size_s = strtok(NULL, "\n");
+    if(size_s == NULL || strlen(size_s) == 0) {
+        add_to_response(BOLDRED "Invalid size\n" RESET);
+        return;
+    }
+    int size = atoi(size_s);
+
     if(fd == 0) {
         add_to_response(BOLDRED "Invalid file descriptor\n" RESET);
         return;
@@ -541,7 +586,10 @@ void cat(char *name) {
     file_flag[len + 2] = '\n';
     int fd = open_mm(file_flag);
     if (fd != -1) {
-        read_mm(DISK_SIZE, fd);
+        char *fd_disk = malloc(15); // 9 for DISK_SIZE length and 5 for fd and 1 for space
+        memset(fd_disk, 0, 15);
+        snprintf(fd_disk, 15, "%d %d", fd, DISK_SIZE);
+        read_mm(fd_disk);
         close_mm(name);    
     }
 }
@@ -575,7 +623,13 @@ void import(char *input) {
     if (fd != -1) {
         FILE *hfile = fopen(host_name, "r");
         while(fgets(buffer, sizeof(buffer), hfile) != NULL) {
-            write_mm(buffer, fd);
+            char *fdt = malloc(5);
+            memset(fdt, 0, 5);
+            snprintf(fdt, 5, "%d", fd);
+            char *fd_buffer = malloc(strlen(fdt) + strlen(buffer) + 1);
+            strcpy(fd_buffer, fdt);
+            strcat(fd_buffer, buffer);
+            write_mm(fd_buffer);
         }
         close(dest_name);
     }
