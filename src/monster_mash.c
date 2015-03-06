@@ -75,6 +75,7 @@ int main(int argc, char **argv) {
         listen(sock_fd, 5);
         client_length = sizeof(client_address);
         //block until we receive a connection
+        printf(YELLOW "Waiting for client...\n" RESET);
         new_sock_fd = accept(sock_fd, (struct sockaddr *)&client_address, 
                 &client_length);
         if(new_sock_fd < 0) {
@@ -82,7 +83,7 @@ int main(int argc, char **argv) {
             return -1;
         }
         char *a = inet_ntoa(client_address.sin_addr);
-        printf(YELLOW "Client connected %s\n" RESET, a);
+        printf(GREEN "Client connected %s\n" RESET, a);
     }
 
 
@@ -119,8 +120,8 @@ int main(int argc, char **argv) {
         char *user_input = malloc(INPUT_BUFFER_SIZE);
         add_to_response("%s%s%s%s $ ", prompt_colors[rand()%5],
                 prompt, RESET, path);
-        if (!isatty(0))
-            add_to_response("\n");
+        //if (!isatty(0))
+            //add_to_response("\n");
         respond();
 
         if(server)
@@ -745,7 +746,7 @@ void respond() {
             char *header = malloc(INPUT_BUFFER_SIZE);
             memset(header, 0, INPUT_BUFFER_SIZE);
             snprintf(header, INPUT_BUFFER_SIZE, "%d", total_length);
-
+            printf(YELLOW "DEBUG: Header=%s\n", header);
             int n = write(new_sock_fd, header, INPUT_BUFFER_SIZE);
             if(n < 0)
                 printf(YELLOW "Warning: error sending header\n" RESET);

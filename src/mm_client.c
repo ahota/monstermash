@@ -38,7 +38,7 @@ int main() {
     if(connect(sock_fd, (struct sockaddr *) &server_address,
                sizeof(server_address)) < 0) {
         err = errno;
-        fprintf(stderr, BOLDRED "Could not connecti, error=%d\n" RESET, err);
+        fprintf(stderr, BOLDRED "Could not connect, error=%d\n" RESET, err);
         exit(1);
     }
 
