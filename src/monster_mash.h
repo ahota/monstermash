@@ -74,4 +74,4 @@ void respond();
 void add_to_response(char *format, ...);
 void cp(char *src_dest);
 void tree();
-void stat_mm(char *name, int simple_format);
+void stat_mm(char *name);

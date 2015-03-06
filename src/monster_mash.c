@@ -235,7 +235,7 @@ void parse_input(char *input, int input_length) {
         tree();
     }
     else if(strcmp(command, "stat") == 0) { //                              STAT
-        stat_mm(strtok(NULL, "\n"), 0);
+        stat_mm(strtok(NULL, "\n"));
     }
     else if(strcmp(command, "exit") == 0) { //                              EXIT
         //Write to socket before closing
@@ -798,7 +798,12 @@ void tree() {
     print_tree(current_dir_inode, 0);
 }
 
-void stat_mm(char *name, int simple_format) {
+void stat_mm(char *name) {
+    if(name == NULL || strlen(name) == 0) {
+        name = malloc(2);
+        name[0] = '.';
+        name[1] = '\0';
+    }
     int start, end;
     trim_whitespace(name, &start, &end);
     
