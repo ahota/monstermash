@@ -1,6 +1,6 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
+#include "standard_includes.h"
+#include "server_includes.h"
+
 #include<assert.h>
 #include<sys/stat.h>
 #include<time.h>
@@ -9,11 +9,6 @@
 #include<error.h>
 #include<errno.h>
 
-//For server puposes
-#include<sys/types.h>
-#include<sys/socket.h>
-#include<netinet/in.h>
-#include<arpa/inet.h>
 
 //Filesystem constants
 #define INPUT_BUFFER_SIZE    128 

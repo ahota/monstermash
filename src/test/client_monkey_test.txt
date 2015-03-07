@@ -1,0 +1,54 @@
+mkfs
+mkfs
+mkfs
+mkfs
+mkfs gjldkfgjd;sl
+open file rw
+open file w
+open phil
+open phil g
+open file g
+open file
+write 1 This is a test
+close file
+i7lki67ykykyti
+cat file
+ls
+tree
+stat file
+open file r
+seek 1 5
+read 1 563487568347
+seek 1 0
+read 1 -1
+seek 1 -1
+read 1 100
+seek 1 100
+read 1 100
+seek 0 0
+close 1 
+close -1
+mkdir test
+mkdir test test
+mkdir "test test"
+mkdir "test"
+cd "test test"
+cd ..
+cd test test
+cd ..
+close file
+link file test/fil
+cd test
+mkdir test2
+link ../file test2/link2
+cd test2
+mkdir test3
+link ../../file test3/link3
+cd test3
+cat link3
+unlink link3
+ls
+cd ../../..
+unlink file
+tree
+exit
