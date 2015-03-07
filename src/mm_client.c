@@ -15,11 +15,16 @@ int main() {
     char *user_input = malloc(INPUT_BUFFER_SIZE);
     printf("Server address : ");
     get_local_input(&user_input);
+    server_address.sin_addr.s_addr = inet_addr(user_input);
+    server_address.sin_family = AF_INET;
+    
+    /*
     server = gethostbyname(user_input);
     if(server == NULL) {
         fprintf(stderr, BOLDRED "Invalid host\n" RESET);
         exit(1);
     }
+    */
 
     //get port number
     printf("Port           : ");
@@ -28,15 +33,19 @@ int main() {
     user_input = malloc(INPUT_BUFFER_SIZE);
     get_local_input(&user_input);
     port = atoi(user_input);
+    server_address.sin_port = htons(port);
 
     //try to connect
+    /*
     memset((void *)&server_address, 0, sizeof(server_address));
     server_address.sin_family = AF_INET;
     memcpy(server->h_addr, &(server_address.sin_addr.s_addr), server->h_length);
-    server_address.sin_port = htons(port);
-    int err;
-    if(connect(sock_fd, (struct sockaddr *) &server_address,
-               sizeof(server_address)) < 0) {
+    server_address.sin_port = htonl(port);
+    */
+    int err, status;
+    status = connect(sock_fd, (struct sockaddr *) &server_address,
+                     sizeof(server_address));
+    if(status < 0) {
         err = errno;
         fprintf(stderr, BOLDRED "Could not connect, error=%d\n" RESET, err);
         exit(1);
