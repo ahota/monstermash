@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
         //create a socket
         sock_fd = socket(AF_INET, SOCK_STREAM, 0);
         if(sock_fd < 0) {
-            add_to_response(BOLDRED "Could not open socket\n" RESET);
+            fprintf(stderr, BOLDRED "Could not open socket\n" RESET);
             return 1;
         }
         //zero out the address
@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
         int err;
         if((err = bind(sock_fd, (struct sockaddr *)&server_address,
            sizeof(server_address))) < 0) {
-            add_to_response(BOLDRED "Bind failed err=%d\n" RESET, err);
+            fprintf(stderr, BOLDRED "Bind failed err=%d\n" RESET, err);
             return -1;
         }
 
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
         new_sock_fd = accept(sock_fd, (struct sockaddr *)&client_address, 
                 &client_length);
         if(new_sock_fd < 0) {
-            add_to_response(BOLDRED "Error accepting connection\n" RESET);
+            fprintf(stderr, BOLDRED "Error accepting connection\n" RESET);
             return -1;
         }
         char *a = inet_ntoa(client_address.sin_addr);
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
         else
             get_local_input(&user_input);
 
-        wlog(YELLOW "DEBUG: %s" RESET, user_input);
+        //wlog(YELLOW "DEBUG: %s" RESET, user_input);
         int input_length = strlen(user_input);
         if(server && input_length == 0) {
             printf(YELLOW "Client disconnected\n" RESET);
@@ -160,23 +160,24 @@ void get_remote_input(int socket, char **user_input) {
     int n = 0;
     int offset = 0;
     //block until we get input on this socket
-    while((n = read(socket, *user_input + offset, current_input_size - 1)) == current_input_size) {
+    while((n = read(socket, *user_input + offset, current_input_size - 1)) ==
+          current_input_size) {
         current_input_size += INPUT_BUFFER_SIZE;
         *user_input = realloc(*user_input, current_input_size);
         offset += n;
     }
-    wlog("N: %d\n", n);
+    //wlog("N: %d\n", n);
     if(n < 0) {
-        add_to_response(BOLDRED "Error reading from client\n" RESET);
+        fprintf(stderr, BOLDRED "Error reading from client\n" RESET);
         return;
     }
-    printf(YELLOW "CLIENT: %s" RESET, *user_input);
+    //printf(YELLOW "CLIENT: %s" RESET, *user_input);
 }
 
 //Figure out the user's command and call the function
 void parse_input(char *input, int input_length) {
     char *command, *input_copy;
-    wlog("Input: %s\n", input);
+    //wlog("Input: %s\n", input);
     input_copy = strndup(input, input_length);
     command = strtok(input, " \n");
     int command_length = strlen(command);
@@ -734,7 +735,7 @@ void add_to_response(char *format, ...) {
     full_response = realloc(full_response, strlen(full_response) + size + 1);
     strncat(full_response, temp, size);
     va_end(args);
-    wlog(YELLOW "DEBUG: current response:\n\t%s\n" RESET, full_response);
+    //wlog(YELLOW "DEBUG: current response:\n\t%s\n" RESET, full_response);
 }
 
 void respond() {
@@ -746,7 +747,7 @@ void respond() {
             char *header = malloc(INPUT_BUFFER_SIZE);
             memset(header, 0, INPUT_BUFFER_SIZE);
             snprintf(header, INPUT_BUFFER_SIZE, "%d", total_length);
-            printf(YELLOW "DEBUG: Header=%s\n", header);
+            //printf(YELLOW "DEBUG: Header=%s\n", header);
             int n = write(new_sock_fd, header, INPUT_BUFFER_SIZE);
             if(n < 0)
                 printf(YELLOW "Warning: error sending header\n" RESET);
