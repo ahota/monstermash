@@ -1,12 +1,15 @@
 \documentclass[]{article}
 	
-\usepackage[T1]{fontenc}
+%\usepackage[T1]{fontenc}
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage[margin=1in]{geometry}
 \definecolor{darkgray}{HTML}{333350}
 \definecolor{lightgray}{HTML}{555570}
 \definecolor{body}{HTML}{414955}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
 
 % Title Page
 \title{\color{darkgray} Monster Mash \\ \large \color{lightgray} A UNIX-like shell and filesystem }
@@ -23,61 +26,66 @@
 
 \color{body}
 \section{About}
-Monster Mash is a UNIX-like shell and virtual filesystem. Its name was originally MASH, which stood for Mohammad and Alok's SHell. This name was taken however, so we added the word monster, referencing the hit 1962 single by Bobby Pickett. It supports various simple commands similar to basic UNIX commands. The underlying filesystem is based on UNIX's inodes and data block structure. 
+Monster Mash is a UNIX-like shell and virtual filesystem. Its name was originally MASH, which stood for \textbf{M}ohammad and \textbf{A}lok's \textbf{SH}ell. This name was taken however, so we added \textit{monster}, referencing the hit single by Bobby Pickett. It supports various simple commands similar to basic UNIX commands. The underlying filesystem is based on UNIX's inode and data block structure. 
 
 \section{Installation}
 The repository is available on Github (\url{https://github.com/ahota/monstermash}). To build Monster Mash, simply run \texttt{make}. This will create two executables, \texttt{mmash} and \texttt{client}. 
 
 \section{Usage}
-The \texttt{mmash} executable will start the shell and filesystem. The following options are supported:
+The \texttt{mmash} executable will start the shell and filesystem in local mode. In this mode, the user can interact with the filesystem using the commands below. 
+
+Alternatively, Monster Mash can be started in server mode by running: \texttt{mmash -s [port]}. This will start the server and wait for a client to connect. The \texttt{port} argument is optional. If it is provided, the Monster Mash server will communicate with the client on that port. If it is not provided, the server will use the default port, 1962, which is the year \textit{Monster Mash} was released as a single.
+
+The Monster Mash client is used by running: \texttt{client \textless hostname\textgreater \space \textless port\textgreater}. Both the server \texttt{hostname} and \texttt{port} are required. Once the client has connected, usage is identical to running Monster Mash in local mode.
+
+The following commands are supported:
 
 \begin{itemize}
-	\item -s [port]: Runs \texttt{mmash} as server on [port]. If port is not specified, \texttt{mmash} will default to port 1962 (the year \textit{Monster Mash} was released as a single.)
-	\item -d: Runs \texttt{mmash} in debug mode
-\end{itemize}
-
-\paragraph{}
-Running \texttt{mmash} with no options starts it locally.
-
-\paragraph{}
-The following commands are supported by \texttt{mmash}: 
-
-\begin{itemize}
-	\item mkfs: Formats and (re)generates the filesystem. This is run automatically when starting \texttt{mmash} locally or when a client connects. This creates a root directory (/).
+	\item \texttt{mkfs}: Formats and (re)generates the filesystem. This is run automatically when starting Monster Mash locally or when a client connects. This creates a root directory (/) and sets it as the current directory
 	
-	\item open \textless filename\textgreater \space \textless r|w|rw\textgreater: Opens a file for reading (r), writing (w) or both (rw) depending on the flag given. If a file is opened with the w or rw flag and does not exist, it will be created. After a file is opened, a file descriptor is printed for later accesses. 
+	\item \texttt{open \textless filename\textgreater \space \textless r|w|rw\textgreater}: Opens a file for reading (\texttt{r}), writing (\texttt{w}) or both (\texttt{rw}) depending on the flag given. If a file is opened with the \texttt{w} or \texttt{rw} flag and does not exist, it will be created. After a file is opened, a file descriptor is printed for later access
 	
-	\item read \textless fd\textgreater \space \textless size\textgreater: Reads size bytes from an open file with file descriptor fd. 
+	\item \texttt{read \textless fd\textgreater \space \textless size\textgreater}: Reads \texttt{size} bytes from an open file with file descriptor \texttt{fd} if the file was opened for reading
 	
-	\item write \textless fd\textgreater \space \textless string\textgreater: Writes string to an open file with file descriptor fd. 
+	\item \texttt{write \textless fd\textgreater \space \textless string\textgreater}: Writes \texttt{string} to an open file with file descriptor \texttt{fd} if the file was opened for writing
 	
-	\item seek \textless fd\textgreater \space \textless offset\textgreater: Seeks to offset (bytes) in file with file descriptor fd. 
+	\item \texttt{seek \textless fd\textgreater \space \textless offset\textgreater}: Seeks to \texttt{offset} (bytes) in file with file descriptor \texttt{fd}
 	
-	\item close \textless name\textgreater: Closes file in the current directory called name.
+	\item \texttt{close \textless fd\textgreater}: Closes file with file descriptor \texttt{fd} if it was open
 	
-	\item mkdir \textless name\textgreater: Makes a directory called name in the current directory. The name can have spaces if it's surrounded by quotes.
+	\item \texttt{mkdir \textless name\textgreater}: Creates a directory \texttt{name} in the current directory. \texttt{name} can have spaces if it is surrounded by quotes
 	
-	\item rmdir \textless name\textgreater: Removes the directory called name from the current directory. The directory must be empty.
+	\item \texttt{rmdir \textless name\textgreater}: Removes the directory \texttt{name} from the current directory. The directory must be empty
 	
-	\item cd \textless path\textgreater: Changes the current directory to path. Path must be relative and can have spaces if surrounded with quotes. 
+	\item \texttt{cd \textless path\textgreater}: Changes the current directory to \texttt{path}. \texttt{path} must be relative to the current directory. It can have spaces if surrounded by quotes
 	
-	\item link \textless target\textgreater \space \textless link name\textgreater: Creates a link called link name to target. Paths to link and target can be relative.
+	\item \texttt{link \textless target\textgreater \space \textless linkname\textgreater}: Creates a link \texttt{linkname} to file or link \texttt{target}. Paths to \texttt{link} and \texttt{target} can be relative
 	
-	\item unlink \textless name\textgreater: Unlinks a link called name or deletes a file called name. If the target data has zero links to it, it is deleted. 
+	\item \texttt{unlink \textless name\textgreater}: Unlinks a link \texttt{name} or deletes a file \texttt{name}. If the target would have zero links to it after this element is unlinked/deleted, the data is erased from the disk
 	
-	\item stat \textless name\textgreater: Provides name on disk, inode ID, type, number of links, blocks allocated and the total data size of element called name. 
+	\item \texttt{stat [name]}: Provides the following information to the element \texttt{name} (or the current directory if \texttt{name} is not provided):
+	\begin{itemize}
+	\item name on disk
+	\item inode ID
+	\item element type
+	\item link count
+	\item number of blocks allocated
+	\item size on disk
+	\end{itemize}
 	
-	\item ls: Lists all elements in the current directory. 
+	\item \texttt{ls}: Lists all elements in the current directory
 	
-	\item cat \textless name\textgreater: Prints the contents of the file called name. 
+	\item \texttt{cat \textless name\textgreater}: Prints the contents of the file \texttt{name}
 	
-	\item cp \textless src\textgreater \space \textless dest\textgreater: Copies the file or link called src to a new file or link called dest. src and dest can be relative paths with spaces if surrounded by quotes
+	\item \texttt{cp \textless src\textgreater \space \textless dest\textgreater}: Copies the file or link \texttt{src} to a new file or link \texttt{dest}. \texttt{src} and \texttt{dest} can be relative paths with spaces if surrounded by quotes
 	
-	\item tree: Lists the contents of all directories hierarchically from the current directory along with their total file size.
+	\item \texttt{tree}: Lists the contents of all directories hierarchically from the current directory along with their total file size
 	
-	\item import \textless src\textgreater \space \textless dest\textgreater: Imports a file called src from the host to a file called dest on the \texttt{mmash} filesystem. 
+	\item \texttt{import \textless src\textgreater \space \textless dest\textgreater}: Imports a file \texttt{src} from the host to a file \texttt{dest} on the Monster Mash filesystem
 	
-	\item export \textless src\textgreater \space \textless dest\textgreater: Exports a file called src from \texttt{mmash} to the host filesystem as dest. 
+	\item \texttt{export \textless src\textgreater \space \textless dest\textgreater}: Exports a file \texttt{src} from the Monster Mash filesystem to a file \texttt{dest} on the host
+	
+	\item \texttt{exit}: In local mode, this shuts down the shell and returns the user to the host. In server mode, this severs the connection between server and client and shuts both processes down. The Monster Mash disk is still available on the host
 \end{itemize}
 
 \section{Architecture}
@@ -89,14 +97,15 @@ The filesystem uses inodes to keep a record of elements. Each element, whether i
 \begin{table}[h]
 	\begin{tabular}{llll}
 		Type  & Name         & Size & Purpose                                              \\ \hline
-		char  & type         & 1    & Type of element: 'f', 'd', or 'l'                    \\
-		short & id           & 2    & Unique ID for this inode                             \\
-		int   & first\_block & 4    & Offset to the first block allocated for this element \\
-		char  & pad          & 1    & Padding to reach 8 bytes                            
+		\texttt{char}  & \texttt{type}         & 1    & Type of element: 'f', 'd', or 'l'                    \\
+		\texttt{short} & \texttt{id}           & 2    & Unique ID for this inode                             \\
+		\texttt{int}   & \texttt{first\_block} & 4    & Offset to the first block allocated for this element \\
+		\texttt{char}  & \texttt{pad}          & 1    & Padding to reach 8 bytes                             \\ \hline
+		\space		   & Total                 & 8    & bytes
 	\end{tabular}
 \end{table}
 
-The inode table supports up to 1024 inodes. Since each is 8 bytes, this means the inode table occupies only 8 kB of the disk.
+The inode table supports up to 1024 inodes. Since each inode is 8 bytes, the inode table occupies 8 kB of the disk.
 
 \subsection{Data Blocks}
 The first data block begins immediately after the inode table. Blocks are 4096 bytes each and have the following structure:
@@ -104,13 +113,19 @@ The first data block begins immediately after the inode table. Blocks are 4096 b
 \begin{table}[h]
 	\begin{tabular}{llll}
 		Type   & Name        & Size & Purpose                                 \\ \hline
-		char * & name        & 32   & The name of this element or 'CONTINUED' \\
-		int    & next\_block & 32   & Byte offset to next block or -1         \\
-		short  & link\_count & 2    & Number of links to this element         \\
-		char * & data        & 4058 & Contents of this element               
+		\texttt{char *} & \texttt{name}        & 32   & The name of this element or 'CONTINUED' \\
+		\texttt{int}    & \texttt{next\_block} & 32   & Byte offset to next block or -1         \\
+		\texttt{short}  & \texttt{link\_count} & 2    & Number of links to this element         \\
+		\texttt{char *} & \texttt{da}ta        & 4058 & Contents of this element                \\ \hline
+		\space		    & Total                & 4096 & bytes
 	\end{tabular}
 \end{table}
 
+The first data block for an element (ie the block pointed to by \texttt{first\_block} in this element's inode) contains the correct name in its \texttt{name} field. Names for elements are limited to 32 characters. When a block is created, its \texttt{next\_block} pointer is set to -1 and \texttt{link\_count} is set to 1. \texttt{link\_count} is incremented and decremented as links to this element are created or unlinked, respectively. If a file is created and linked to, its \texttt{link\_count} would be 2. If the \emph{file} is then deleted, the data blocks associated with that file are still kept, as \texttt{link\_count} is still 1 due to the link. If that link is later unlinked, the data blocks are erased.
+
+Directories hold a table of their contents in the \texttt{data} section of their block(s). Each entry in the table contains two values: inode ID and name. inode IDs in the table are used for unique referencing in commands such as \texttt{cd}. Names in the table are used for printing and user-reference in commands such as \texttt{ls} and \texttt{tree}. Files use the \texttt{data} section to hold their contents in plain text. Links use this section simply to hold a reference of the inode ID to which they link.
+
+If the data in a directory or file grows beyond a single block, a new block is automatically allocated and linked to in the current block's \texttt{next\_block} pointer. This new block's \texttt{name} field contains 'CONTINUED' to distinguish it as a continuation block. Block allocation and traversal is completely abstracted from the user during normal use. The number of blocks allocated for an element can be seen with the \texttt{stat} command.
 
 \section{Limitations}
 
